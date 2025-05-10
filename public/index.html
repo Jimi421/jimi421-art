@@ -11,17 +11,41 @@
     #upload input, #upload button { display:block; width:100%; margin-top:0.5rem; padding:0.6rem; font-size:1rem; border-radius:4px; border:1px solid #ddd; }
     #gallery { display:grid; grid-template-columns:1fr; gap:1rem; }
     @media(min-width:600px) { #gallery { grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); } }
-    .card { background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+    .card { background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); cursor:pointer; position:relative; }
     .media { width:100%; height:200px; object-fit:cover; }
-    .info { padding:0.5rem; }
-    .filename { font-weight:600; outline:none; }
-    .tags { margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem; }
-    .tag-input { flex:1; min-width:60px; border:1px solid #ddd; border-radius:4px; padding:0.3rem; font-size:0.9rem; }
-    .remove-btn { margin-top:0.5rem; background:#e74c3c; color:#fff; border:none; padding:0.5rem; font-size:0.9rem; border-radius:4px; width:100%; cursor:pointer; }
+    .info { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); color:#fff; padding:1rem; box-sizing:border-box; }
+    .card.active .info { display:flex; flex-direction:column; justify-content:flex-end; }
+    .filename { font-weight:600; outline:none; margin-bottom:0.5rem; }
+    .tags { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem; }
+    .tag-input { flex:1; min-width:60px; border:none; border-radius:4px; padding:0.3rem; font-size:0.9rem; }
+    .remove-btn { background:#e74c3c; color:#fff; border:none; padding:0.5rem; font-size:0.9rem; border-radius:4px; width:100%; cursor:pointer; }
+    /* Fullscreen expand */
+    .card.active {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 1000;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow: auto;
+    }
+    .card.active .media {
+      max-width: 90%;
+      max-height: 80%;
+      height: auto;
+    }
+    .card.active .info {
+      position: absolute;
+      bottom: 10px; left: 10px; right: 10px; top: auto;
+      background: transparent;
+    }
   </style>
 </head>
 <body>
   <h1>Jimi421 Art Gallery</h1>
+
   <div id="upload">
     <input type="file" id="fileInput" multiple accept="image/*,video/*" />
     <button id="uploadBtn">Upload</button>
@@ -42,6 +66,9 @@
         const card = document.createElement('div');
         card.className = 'card';
 
+        // Toggle info and fullscreen on click
+        card.onclick = () => card.classList.toggle('active');
+
         // Media
         if (item.key.match(/\.(mp4|mov|webm)$/i)) {
           const video = document.createElement('video');
@@ -57,7 +84,7 @@
           card.appendChild(img);
         }
 
-        // Info Section
+        // Info Overlay
         const info = document.createElement('div');
         info.className = 'info';
 
@@ -69,9 +96,7 @@
         fname.onblur = async () => {
           const newName = fname.textContent.trim();
           if (newName && newName !== item.key) {
-            // call rename API (to implement)
             await fetch(`${API_BASE}/api/rename?old=${encodeURIComponent(item.key)}&new=${encodeURIComponent(newName)}`, { method: 'POST' });
-            item.key = newName;
             await loadGallery();
           }
         };
@@ -87,11 +112,9 @@
           if (e.key === 'Enter') {
             const tag = tagInput.value.trim();
             if (tag) {
-              // save tag in KV or backend (to implement)
-              // e.g., await fetch(`${API_BASE}/api/tag?file=${encodeURIComponent(item.key)}&tag=${encodeURIComponent(tag)}`);
-              const tagPill = document.createElement('span');
-              tagPill.textContent = `#${tag}`;
-              tagsDiv.insertBefore(tagPill, tagInput);
+              const pill = document.createElement('span');
+              pill.textContent = `#${tag}`;
+              tagsDiv.insertBefore(pill, tagInput);
               tagInput.value = '';
             }
           }
@@ -103,7 +126,8 @@
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-btn';
         removeBtn.textContent = 'Remove';
-        removeBtn.onclick = async () => {
+        removeBtn.onclick = async (e) => {
+          e.stopPropagation();
           if (confirm(`Remove ${item.key}?`)) {
             await fetch(`${API_BASE}/api/delete?filename=${encodeURIComponent(item.key)}`, { method: 'DELETE' });
             await loadGallery();
@@ -116,12 +140,11 @@
       });
     }
 
-    document.getElementById('uploadBtn').addEventListener('click', async () => {
-      const files = document.getElementById('fileInput').files;
-      if (files.length === 0) return;
-      const btn = document.getElementById('uploadBtn');
+    document.getElementById('uploadBtn').addEventListener('click', async (e) => {
+      const btn = e.target;
       btn.disabled = true; btn.textContent = 'Uploading...';
 
+      const files = document.getElementById('fileInput').files;
       for (const file of files) {
         const uploadURL = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
         await fetch(uploadURL, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
