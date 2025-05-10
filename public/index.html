@@ -22,6 +22,7 @@
     .share-btn { background: #3498db; color: #fff; }
     .close-btn { position: absolute; top: 10px; right: 10px; background: transparent; color: #fff; border: none; font-size: 1.5rem; cursor: pointer; }
     #openUpload { position: fixed; bottom: 20px; right: 20px; background: #2ecc71; color: #fff; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 2rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    /* Upload Modal */
     #uploadModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
     #uploadModal.active { display: flex; }
     .modal-content { background: #fff; border-radius: 8px; padding: 1.5rem; width: 90%; max-width: 500px; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
@@ -35,11 +36,15 @@
     .preview { position: relative; width: 80px; height: 80px; border: 1px solid #ccc; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
     .preview img { max-width: 100%; max-height: 100%; }
     .preview button { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 4px; font-size: 12px; padding: 2px 4px; cursor: pointer; }
-    .preview .rotate-btn { bottom: 2px; left: 2px; top: auto; right: auto; }
+    .rotate-btn { bottom: 2px; left: 2px; top: auto; right: auto; }
+    /* Share Modal */
     #shareModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2100; justify-content: center; align-items: center; }
     #shareModal.active { display: flex; }
     .share-box { background: #fff; padding: 1rem; border-radius: 8px; max-width: 90%; width: 300px; }
     .share-box a { display: block; margin: 0.5rem 0; color: #3498db; text-decoration: none; }
+    /* Toast Notification */
+    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 3000; }
+    #toast.show { opacity: 1; }
   </style>
 </head>
 <body>
@@ -67,9 +72,18 @@
     </div>
   </div>
 
+  <div id="toast"></div>
+
   <script>
     const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
     let filesToUpload = [], currentUrl = '';
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
 
     function renderPreviewGrid() {
       const previewGrid = document.getElementById('previewGrid');
@@ -88,6 +102,7 @@
           removeBtn.onclick = () => {
             filesToUpload.splice(index, 1);
             renderPreviewGrid();
+            showToast('Removed from preview');
           };
           div.appendChild(removeBtn);
 
@@ -101,12 +116,13 @@
             image.onload = () => {
               canvas.width = image.height;
               canvas.height = image.width;
-              ctx.translate(canvas.width / 2, canvas.height / 2);
+              ctx.translate(canvas.width/2, canvas.height/2);
               ctx.rotate(90 * Math.PI / 180);
-              ctx.drawImage(image, -image.width / 2, -image.height / 2);
+              ctx.drawImage(image, -image.width/2, -image.height/2);
               canvas.toBlob(blob => {
                 filesToUpload[index] = new File([blob], file.name, { type: file.type });
                 renderPreviewGrid();
+                showToast('Rotated preview');
               }, file.type);
             };
             image.src = reader.result;
@@ -128,11 +144,14 @@
         const card = document.createElement('div');
         card.className = 'card';
         card.onclick = () => card.classList.toggle('active');
-        const media = document.createElement(item.key.match(/\.(mp4|mov|webm)$/i) ? 'video' : 'img');
+
+        const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
+        const media = document.createElement(isVideo ? 'video' : 'img');
         media.src = `${API_BASE}${item.url}`;
         if (media.tagName === 'VIDEO') media.controls = true;
         media.className = 'media';
         card.appendChild(media);
+
         const info = document.createElement('div'); info.className = 'info';
         const closeBtn = document.createElement('button'); closeBtn.className = 'close-btn'; closeBtn.textContent = '×';
         closeBtn.onclick = e => { e.stopPropagation(); card.classList.remove('active'); };
@@ -142,7 +161,7 @@
           const newName = fname.textContent.trim();
           if (newName && newName !== item.key) {
             await fetch(`${API_BASE}/api/rename?old=${encodeURIComponent(item.key)}&new=${encodeURIComponent(newName)}`, { method: 'POST' });
-            loadGallery();
+            loadGallery(); showToast('Renamed file');
           }
         };
         info.appendChild(fname);
@@ -151,21 +170,18 @@
         removeBtn.onclick = async e => {
           e.stopPropagation();
           if (confirm(`Remove ${item.key}?`)) {
-            await fetch(`${API_BASE}/api/delete?filename=${encodeURIComponent(item.key)}`, { method: 'DELETE' });
-            loadGallery();
+            await fetch(`${API_BASE}/api/delete?group=root&filename=${encodeURIComponent(item.key)}`, { method: 'DELETE' });
+            loadGallery(); showToast('Removed file');
           }
         };
         const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.textContent = 'Share';
         shareBtn.onclick = e => {
           e.stopPropagation();
-          currentUrl = `${API_BASE}${item.url}`;
-          showShareModal();
+          currentUrl = `${API_BASE}${item.url}`; showShareModal();
         };
-        btnRow.appendChild(removeBtn);
-        btnRow.appendChild(shareBtn);
+        btnRow.appendChild(removeBtn); btnRow.appendChild(shareBtn);
         info.appendChild(btnRow);
-        card.appendChild(info);
-        container.appendChild(card);
+        card.appendChild(info); container.appendChild(card);
       });
     }
 
@@ -184,11 +200,10 @@
         { name: 'LinkedIn', href: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`, target: '_blank' }
       ];
       platforms.forEach(p => {
-        const a = document.createElement('a'); a.textContent = p.name; a.href = p.href; if (p.target) a.target = p.target;
-        links.appendChild(a);
+        const a = document.createElement('a'); a.textContent = p.name; a.href = p.href; if (p.target) a.target = p.target; links.appendChild(a);
       });
       document.getElementById('copyLinkBtn').onclick = () => {
-        navigator.clipboard.writeText(currentUrl).then(() => alert('Link copied to clipboard!'));
+        navigator.clipboard.writeText(currentUrl).then(() => showToast('Link copied to clipboard!'));
       };
       modal.classList.add('active');
     }
@@ -196,33 +211,22 @@
     document.getElementById('openUpload').onclick = () => document.getElementById('uploadModal').classList.add('active');
     document.getElementById('closeModal').onclick = () => {
       document.getElementById('uploadModal').classList.remove('active');
-      filesToUpload = [];
-      document.getElementById('previewGrid').innerHTML = '';
+      filesToUpload = []; document.getElementById('previewGrid').innerHTML = '';
       document.getElementById('dropzone').textContent = 'Drag & drop files here or click to select';
     };
     document.getElementById('dropzone').onclick = () => document.getElementById('fileInput').click();
     document.getElementById('dropzone').ondragover = e => { e.preventDefault(); e.currentTarget.classList.add('hover'); };
     document.getElementById('dropzone').ondragleave = e => e.currentTarget.classList.remove('hover');
-    document.getElementById('dropzone').ondrop = e => {
-      e.preventDefault(); e.currentTarget.classList.remove('hover');
-      filesToUpload = Array.from(e.dataTransfer.files);
-      renderPreviewGrid();
-    };
-    document.getElementById('fileInput').onchange = e => {
-      filesToUpload = Array.from(e.target.files);
-      renderPreviewGrid();
-    };
+    document.getElementById('dropzone').ondrop = e => { e.preventDefault(); e.currentTarget.classList.remove('hover'); filesToUpload = Array.from(e.dataTransfer.files); renderPreviewGrid(); };
+    document.getElementById('fileInput').onchange = e => { filesToUpload = Array.from(e.target.files); renderPreviewGrid(); };
     document.getElementById('uploadBtn').onclick = async () => {
-      if (filesToUpload.length === 0) return;
-      const btn = document.getElementById('uploadBtn');
-      btn.disabled = true; btn.textContent = 'Uploading...';
+      if (!filesToUpload.length) return;
+      const btn = document.getElementById('uploadBtn'); btn.disabled = true; btn.textContent = 'Uploading...';
       for (const file of filesToUpload) {
         const url = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
         await fetch(url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
       }
-      btn.disabled = false; btn.textContent = 'Upload';
-      document.getElementById('closeModal').click();
-      loadGallery();
+      btn.disabled = false; btn.textContent = 'Upload'; document.getElementById('closeModal').click(); loadGallery(); showToast('Upload complete!');
     };
     window.addEventListener('DOMContentLoaded', loadGallery);
   </script>
