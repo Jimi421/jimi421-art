@@ -23,9 +23,7 @@
   <div id="upload">
     <h2>Upload New Art</h2>
     <input type="file" id="fileInput" multiple />
-    <select id="groupSelect">
-      <option value="">-- Select existing group --</option>
-    </select>
+    <select id="groupSelect"><option value="">-- Select existing group --</option></select>
     <input type="text" id="groupInput" placeholder="Or enter a new group name" />
     <button id="uploadBtn">Upload</button>
   </div>
@@ -36,7 +34,7 @@
     const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 
     async function loadGroups() {
-      // 🔥 MUST use /api/groups here:
+      // 🔥 This must call /api/groups on your Worker
       const res = await fetch(`${API_BASE}/api/groups`);
       const groups = await res.json();
 
@@ -46,27 +44,24 @@
       select.innerHTML = '<option value="">-- Select existing group --</option>';
 
       for (const group of groups) {
-        // populate dropdown
+        // Dropdown option
         const opt = document.createElement('option');
-        opt.value = group;
-        opt.textContent = group;
+        opt.value = group; opt.textContent = group;
         select.appendChild(opt);
 
-        // fetch one image as cover
+        // Fetch one cover image
         const galleryRes = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
         const items = await galleryRes.json();
         const coverUrl = items[0] ? `${API_BASE}${items[0].url}` : null;
 
-        // build card
-        const card = document.createElement('div');
-        card.className = 'group-card';
+        // Build group card
+        const card = document.createElement('div'); card.className = 'group-card';
         const link = document.createElement('a');
         link.href = `gallery.html?group=${encodeURIComponent(group)}`;
 
         if (coverUrl) {
           const img = document.createElement('img');
-          img.src = coverUrl;
-          img.className = 'thumb';
+          img.src = coverUrl; img.className = 'thumb';
           link.appendChild(img);
         } else {
           const placeholder = document.createElement('div');
@@ -78,6 +73,7 @@
         const label = document.createElement('div');
         label.className = 'group-label';
         label.textContent = group;
+
         card.appendChild(link);
         card.appendChild(label);
         container.appendChild(card);
@@ -86,8 +82,7 @@
 
     document.getElementById('uploadBtn').addEventListener('click', async () => {
       const btn = document.getElementById('uploadBtn');
-      btn.disabled = true;
-      btn.textContent = 'Uploading...';
+      btn.disabled = true; btn.textContent = 'Uploading...';
 
       const files = document.getElementById('fileInput').files;
       const selected = document.getElementById('groupSelect').value;
@@ -103,8 +98,7 @@
         });
       }
 
-      btn.textContent = 'Upload';
-      btn.disabled = false;
+      btn.textContent = 'Upload'; btn.disabled = false;
       document.getElementById('fileInput').value = '';
       document.getElementById('groupInput').value = '';
       document.getElementById('groupSelect').selectedIndex = 0;
