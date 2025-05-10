@@ -5,21 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jimi421 Art Gallery</title>
   <style>
-    body { margin:0; font-family:'Segoe UI',sans-serif; background:#f7f7f7; color:#222; padding:2rem }
-    h1 { font-size:2rem; color:#444; margin-bottom:1rem }
-    #upload { background:#fff; padding:1rem; border-radius:8px; box-shadow:0 0 12px rgba(0,0,0,0.05); margin-bottom:2rem }
-    #upload input, #upload button { display:block; width:100%; margin-top:.5rem; padding:.6rem; font-size:1rem }
-    #gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1rem }
-    .card { background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); text-align:center }
-    .card img { width:100%; height:200px; object-fit:cover }
+    body { margin:0; font-family:'Segoe UI',sans-serif; background:#f7f7f7; color:#222; padding:1rem; }
+    h1 { font-size:2rem; color:#444; margin-bottom:1rem; text-align:center; }
+    #upload { background:#fff; padding:1rem; border-radius:8px; box-shadow:0 0 12px rgba(0,0,0,0.05); margin-bottom:1rem; }
+    #upload input, #upload button { display:block; width:100%; margin-top:0.5rem; padding:0.6rem; font-size:1rem; border-radius:4px; border:1px solid #ddd; }
+    #gallery { display:grid; grid-template-columns:1fr; gap:1rem; }
+    @media(min-width:600px) { #gallery { grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); } }
+    .card { background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+    .media { width:100%; height:200px; object-fit:cover; }
+    .info { padding:0.5rem; }
+    .filename { font-weight:600; outline:none; }
+    .tags { margin-top:0.5rem; display:flex; flex-wrap:wrap; gap:0.5rem; }
+    .tag-input { flex:1; min-width:60px; border:1px solid #ddd; border-radius:4px; padding:0.3rem; font-size:0.9rem; }
+    .remove-btn { margin-top:0.5rem; background:#e74c3c; color:#fff; border:none; padding:0.5rem; font-size:0.9rem; border-radius:4px; width:100%; cursor:pointer; }
   </style>
 </head>
 <body>
   <h1>Jimi421 Art Gallery</h1>
-
   <div id="upload">
-    <h2>Upload New Art</h2>
-    <input type="file" id="fileInput" multiple />
+    <input type="file" id="fileInput" multiple accept="image/*,video/*" />
     <button id="uploadBtn">Upload</button>
   </div>
 
@@ -34,38 +38,97 @@
       const container = document.getElementById('gallery');
       container.innerHTML = '';
 
-      for (const item of items) {
+      items.reverse().forEach(item => {
         const card = document.createElement('div');
         card.className = 'card';
 
-        const img = document.createElement('img');
-        img.src = `${API_BASE}${item.url}`;
-        img.alt = item.key;
+        // Media
+        if (item.key.match(/\.(mp4|mov|webm)$/i)) {
+          const video = document.createElement('video');
+          video.src = `${API_BASE}${item.url}`;
+          video.controls = true;
+          video.className = 'media';
+          card.appendChild(video);
+        } else {
+          const img = document.createElement('img');
+          img.src = `${API_BASE}${item.url}`;
+          img.alt = item.key;
+          img.className = 'media';
+          card.appendChild(img);
+        }
 
-        card.appendChild(img);
+        // Info Section
+        const info = document.createElement('div');
+        info.className = 'info';
+
+        // Editable filename
+        const fname = document.createElement('div');
+        fname.className = 'filename';
+        fname.contentEditable = true;
+        fname.textContent = item.key;
+        fname.onblur = async () => {
+          const newName = fname.textContent.trim();
+          if (newName && newName !== item.key) {
+            // call rename API (to implement)
+            await fetch(`${API_BASE}/api/rename?old=${encodeURIComponent(item.key)}&new=${encodeURIComponent(newName)}`, { method: 'POST' });
+            item.key = newName;
+            await loadGallery();
+          }
+        };
+        info.appendChild(fname);
+
+        // Tags input
+        const tagsDiv = document.createElement('div');
+        tagsDiv.className = 'tags';
+        const tagInput = document.createElement('input');
+        tagInput.className = 'tag-input';
+        tagInput.placeholder = '#tag';
+        tagInput.onkeypress = async (e) => {
+          if (e.key === 'Enter') {
+            const tag = tagInput.value.trim();
+            if (tag) {
+              // save tag in KV or backend (to implement)
+              // e.g., await fetch(`${API_BASE}/api/tag?file=${encodeURIComponent(item.key)}&tag=${encodeURIComponent(tag)}`);
+              const tagPill = document.createElement('span');
+              tagPill.textContent = `#${tag}`;
+              tagsDiv.insertBefore(tagPill, tagInput);
+              tagInput.value = '';
+            }
+          }
+        };
+        tagsDiv.appendChild(tagInput);
+        info.appendChild(tagsDiv);
+
+        // Remove button
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = async () => {
+          if (confirm(`Remove ${item.key}?`)) {
+            await fetch(`${API_BASE}/api/delete?filename=${encodeURIComponent(item.key)}`, { method: 'DELETE' });
+            await loadGallery();
+          }
+        };
+        info.appendChild(removeBtn);
+
+        card.appendChild(info);
         container.appendChild(card);
-      }
+      });
     }
 
     document.getElementById('uploadBtn').addEventListener('click', async () => {
-      const btn = document.getElementById('uploadBtn');
-      btn.disabled = true;
-      btn.textContent = 'Uploading...';
-
       const files = document.getElementById('fileInput').files;
+      if (files.length === 0) return;
+      const btn = document.getElementById('uploadBtn');
+      btn.disabled = true; btn.textContent = 'Uploading...';
+
       for (const file of files) {
         const uploadURL = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
-        await fetch(uploadURL, {
-          method: 'PUT',
-          headers: { 'Content-Type': file.type },
-          body: file
-        });
+        await fetch(uploadURL, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
       }
 
-      btn.textContent = 'Upload';
-      btn.disabled = false;
+      btn.disabled = false; btn.textContent = 'Upload';
       document.getElementById('fileInput').value = '';
-      alert('Upload complete!');
       await loadGallery();
     });
 
