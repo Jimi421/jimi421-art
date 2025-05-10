@@ -8,13 +8,10 @@
     body { margin:0; font-family:'Segoe UI',sans-serif; background:#f7f7f7; color:#222; padding:2rem }
     h1 { font-size:2rem; color:#444; margin-bottom:1rem }
     #upload { background:#fff; padding:1rem; border-radius:8px; box-shadow:0 0 12px rgba(0,0,0,0.05); margin-bottom:2rem }
-    #upload input, #upload select, #upload button { display:block; width:100%; margin-top:.5rem; padding:.6rem; font-size:1rem }
-    #groups { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:1rem }
-    .group-card { background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); text-align:center }
-    .group-card img.thumb { width:100%; height:150px; object-fit:cover }
-    .group-card .thumb.empty { display:flex; align-items:center; justify-content:center; height:150px; color:#888; font-size:.9rem }
-    .group-label { padding:.5rem; font-weight:600 }
-    a { text-decoration:none; color:inherit }
+    #upload input, #upload button { display:block; width:100%; margin-top:.5rem; padding:.6rem; font-size:1rem }
+    #gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1rem }
+    .card { background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); text-align:center }
+    .card img { width:100%; height:200px; object-fit:cover }
   </style>
 </head>
 <body>
@@ -23,74 +20,41 @@
   <div id="upload">
     <h2>Upload New Art</h2>
     <input type="file" id="fileInput" multiple />
-    <select id="groupSelect"><option value="">-- Select existing group --</option></select>
-    <input type="text" id="groupInput" placeholder="Or enter a new group name" />
     <button id="uploadBtn">Upload</button>
   </div>
 
-  <div id="groups"></div>
+  <div id="gallery"></div>
 
   <script>
     const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 
-    async function loadGroups() {
-      // 🔥 This must call /api/groups on your Worker
-      const res = await fetch(`${API_BASE}/api/groups`);
-      const groups = await res.json();
-
-      const container = document.getElementById('groups');
-      const select = document.getElementById('groupSelect');
+    async function loadGallery() {
+      const res = await fetch(`${API_BASE}/api/gallery`);
+      const items = await res.json();
+      const container = document.getElementById('gallery');
       container.innerHTML = '';
-      select.innerHTML = '<option value="">-- Select existing group --</option>';
 
-      for (const group of groups) {
-        // Dropdown option
-        const opt = document.createElement('option');
-        opt.value = group; opt.textContent = group;
-        select.appendChild(opt);
+      for (const item of items) {
+        const card = document.createElement('div');
+        card.className = 'card';
 
-        // Fetch one cover image
-        const galleryRes = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
-        const items = await galleryRes.json();
-        const coverUrl = items[0] ? `${API_BASE}${items[0].url}` : null;
+        const img = document.createElement('img');
+        img.src = `${API_BASE}${item.url}`;
+        img.alt = item.key;
 
-        // Build group card
-        const card = document.createElement('div'); card.className = 'group-card';
-        const link = document.createElement('a');
-        link.href = `gallery.html?group=${encodeURIComponent(group)}`;
-
-        if (coverUrl) {
-          const img = document.createElement('img');
-          img.src = coverUrl; img.className = 'thumb';
-          link.appendChild(img);
-        } else {
-          const placeholder = document.createElement('div');
-          placeholder.className = 'thumb empty';
-          placeholder.textContent = 'No images yet';
-          link.appendChild(placeholder);
-        }
-
-        const label = document.createElement('div');
-        label.className = 'group-label';
-        label.textContent = group;
-
-        card.appendChild(link);
-        card.appendChild(label);
+        card.appendChild(img);
         container.appendChild(card);
       }
     }
 
     document.getElementById('uploadBtn').addEventListener('click', async () => {
       const btn = document.getElementById('uploadBtn');
-      btn.disabled = true; btn.textContent = 'Uploading...';
+      btn.disabled = true;
+      btn.textContent = 'Uploading...';
 
       const files = document.getElementById('fileInput').files;
-      const selected = document.getElementById('groupSelect').value;
-      const custom = document.getElementById('groupInput').value.trim();
-      const group = custom || selected || 'root';
-
       for (const file of files) {
-        const uploadURL = `${API_BASE}/api/upload?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(file.name)}`;
+        const uploadURL = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
         await fetch(uploadURL, {
           method: 'PUT',
           headers: { 'Content-Type': file.type },
@@ -98,15 +62,14 @@
         });
       }
 
-      btn.textContent = 'Upload'; btn.disabled = false;
+      btn.textContent = 'Upload';
+      btn.disabled = false;
       document.getElementById('fileInput').value = '';
-      document.getElementById('groupInput').value = '';
-      document.getElementById('groupSelect').selectedIndex = 0;
       alert('Upload complete!');
-      await loadGroups();
+      await loadGallery();
     });
 
-    window.addEventListener('DOMContentLoaded', loadGroups);
+    window.addEventListener('DOMContentLoaded', loadGallery);
   </script>
 </body>
 </html>
