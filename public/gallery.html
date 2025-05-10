@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gallery</title>
+  <style>
+    body { margin:0; font-family: 'Segoe UI', sans-serif; background:#f7f7f7; color:#222; padding:2rem; }
+    a.back { display:inline-block; margin-bottom:1rem; color:#444; }
+    h1 { font-size:2rem; color:#444; margin-bottom:1rem; text-transform:capitalize; }
+    #gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:1rem; }
+    .thumb { width:100%; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.1); transition:transform .2s; }
+    .thumb:hover { transform:scale(1.03); }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="back">← Back</a>
+  <h1 id="gallery-title"></h1>
+  <div id="gallery"></div>
+
+  <script>
+    const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
+    function getParam(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+    const group = getParam('group') || 'root';
+    document.getElementById('gallery-title').textContent = group;
+
+    async function loadGallery() {
+      const res = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
+      const items = await res.json();
+      const container = document.getElementById('gallery');
+      container.innerHTML = '';
+      items.reverse().forEach(item => {
+        const img = document.createElement('img');
+        img.src = `${API_BASE}${item.url}`;
+        img.className = 'thumb';
+        container.appendChild(img);
+      });
+    }
+    window.addEventListener('DOMContentLoaded', loadGallery);
+  </script>
+</body>
+</html>

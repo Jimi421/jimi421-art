@@ -7,8 +7,10 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
   btn.textContent = 'Uploading...';
 
   const files = document.getElementById('fileInput').files;
+  const group = document.getElementById('groupInput').value.trim() || 'root';
+
   for (const file of files) {
-    const uploadURL = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
+    const uploadURL = `${API_BASE}/api/upload?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(file.name)}`;
     await fetch(uploadURL, {
       method: 'PUT',
       headers: { 'Content-Type': file.type },
@@ -19,28 +21,6 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
   btn.textContent = 'Upload';
   btn.disabled = false;
   document.getElementById('fileInput').value = '';
-  loadGallery();
+  document.getElementById('groupInput').value = '';
+  alert('Upload complete!');
 });
-
-// Load gallery from Worker
-async function loadGallery() {
-  // 1) Fetch the list from your Worker
-  const res = await fetch(`${API_BASE}/api/gallery`);
-  const items = await res.json();
-
-  // 2) Clear and render
-  const container = document.getElementById('gallery');
-  container.innerHTML = '';
-
-  // Show newest first
-  items.reverse().forEach(item => {
-    const img = document.createElement('img');
-    // 🔑 prefix with API_BASE so it hits your Worker
-    img.src = `${API_BASE}${item.url}`;
-    img.className = 'thumb';
-    container.appendChild(img);
-  });
-}
-
-// Initial load
-window.addEventListener('DOMContentLoaded', loadGallery);

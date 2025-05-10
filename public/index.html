@@ -13,69 +13,107 @@
       padding: 2rem;
     }
     h1 {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
+      font-size: 2rem;
       color: #444;
-    }
-    h2 {
-      margin-top: 2rem;
-      font-size: 1.5rem;
-      color: #666;
-    }
-    #gallery {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-    .thumb {
-      width: 100%;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      transition: transform 0.2s;
-    }
-    .thumb:hover {
-      transform: scale(1.03);
+      margin-bottom: 1rem;
     }
     #upload {
-      margin-top: 2rem;
       background: white;
       padding: 1rem;
       border-radius: 8px;
       box-shadow: 0 0 12px rgba(0,0,0,0.05);
+      margin-bottom: 2rem;
     }
-    #upload input[type=file] {
+    #upload input, #upload button {
+      display: block;
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.6rem;
+      font-size: 1rem;
+    }
+    #groups {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+    .group-card {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .group-card img.thumb {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+    }
+    .group-card .thumb.empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 150px;
+      color: #888;
+      font-size: 0.9rem;
+    }
+    .group-label {
       padding: 0.5rem;
-      font-size: 1rem;
+      font-weight: 600;
     }
-    #uploadBtn {
-      margin-top: 1rem;
-      padding: 0.7rem 1.5rem;
-      font-size: 1rem;
-      background: #222;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    #uploadBtn:hover {
-      background: #444;
+    a {
+      text-decoration: none;
+      color: inherit;
     }
   </style>
 </head>
 <body>
-  <h1>🎨 Jimi421 Art Gallery</h1>
+  <h1>Jimi421 Art Gallery</h1>
 
   <div id="upload">
     <h2>Upload New Art</h2>
     <input type="file" id="fileInput" multiple />
-    <br />
+    <input type="text" id="groupInput" placeholder="Enter gallery name (e.g. trees)" />
     <button id="uploadBtn">Upload</button>
   </div>
 
-  <h2>Gallery</h2>
-  <div id="gallery"></div>
+  <div id="groups"></div>
 
   <script src="/script.js"></script>
+  <script>
+    const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
+    async function loadGroups() {
+      const res = await fetch(`${API_BASE}/api/groups`);
+      const groups = await res.json();
+      const container = document.getElementById('groups');
+      container.innerHTML = '';
+      for (const group of groups) {
+        const gal = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
+        const items = await gal.json();
+        const cover = items[0] ? `${API_BASE}${items[0].url}` : null;
+        const card = document.createElement('div');
+        card.className = 'group-card';
+        const link = document.createElement('a');
+        link.href = `gallery.html?group=${encodeURIComponent(group)}`;
+        if (cover) {
+          const img = document.createElement('img');
+          img.src = cover;
+          img.className = 'thumb';
+          link.appendChild(img);
+        } else {
+          const placeholder = document.createElement('div');
+          placeholder.className = 'thumb empty';
+          placeholder.textContent = 'No images';
+          link.appendChild(placeholder);
+        }
+        const label = document.createElement('div');
+        label.className = 'group-label';
+        label.textContent = group;
+        card.appendChild(link);
+        card.appendChild(label);
+        container.appendChild(card);
+      }
+    }
+    window.addEventListener('DOMContentLoaded', loadGroups);
+  </script>
 </body>
 </html>
