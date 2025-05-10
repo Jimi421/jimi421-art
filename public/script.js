@@ -1,6 +1,37 @@
-const API_BASE = 'https://jimi421-art.jimi421.workers.dev'; // 👈 Your live Worker URL
+const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 
-// Load the image gallery from the backend
+// 🖼 Preview selected images before upload
+document.getElementById('fileInput').addEventListener('change', function () {
+  const files = this.files;
+  const container = document.getElementById('gallery');
+  container.innerHTML = ''; // Optional: reset
+  for (const file of files) {
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.className = 'thumb';
+      container.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
+// 🚀 Upload each file to Worker via PUT
+document.getElementById('uploadBtn').addEventListener('click', async () => {
+  const files = document.getElementById('fileInput').files;
+  for (const file of files) {
+    const uploadURL = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
+    await fetch(uploadURL, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file
+    });
+  }
+  loadGallery();
+});
+
+// 🧱 Load gallery from Worker / R2
 async function loadGallery() {
   const res = await fetch(`${API_BASE}/api/gallery`);
   const items = await res.json();
@@ -14,34 +45,5 @@ async function loadGallery() {
   });
 }
 
-// Handle file upload
-document.getElementById('uploadBtn').addEventListener('click', async () => {
-  const files = document.getElementById('fileInput').files;
-  for (const file of files) {
-    // 1. Get a signed R2 upload URL
-    const { uploadURL } = await fetch(`${API_BASE}/api/get-upload-url`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename: file.name, contentType: file.type })
-    }).then(r => r.json());
-
-    // 2. Upload the file to R2
-    await fetch(uploadURL, {
-      method: 'PUT',
-      body: file
-    });
-
-    // 3. Register the file in KV
-    await fetch(`${API_BASE}/api/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filename: file.name })
-    });
-  }
-
-  // Refresh gallery after upload
-  loadGallery();
-});
-
-// Load gallery on page load
+// ⏱ Load on page open
 window.addEventListener('DOMContentLoaded', loadGallery);
