@@ -94,13 +94,11 @@
       select.innerHTML = '<option value="">-- Select existing group --</option>';
 
       for (const group of groups) {
-        // Add to dropdown
         const opt = document.createElement('option');
         opt.value = group;
         opt.textContent = group;
         select.appendChild(opt);
 
-        // Fetch cover image
         const gal = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
         const items = await gal.json();
         const cover = items[0] ? `${API_BASE}${items[0].url}` : null;
