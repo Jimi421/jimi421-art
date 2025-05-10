@@ -22,6 +22,7 @@
     .share-btn { background: #3498db; color: #fff; }
     .close-btn { position: absolute; top: 10px; right: 10px; background: transparent; color: #fff; border: none; font-size: 1.5rem; cursor: pointer; }
     #openUpload { position: fixed; bottom: 20px; right: 20px; background: #2ecc71; color: #fff; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 2rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+
     /* Upload Modal */
     #uploadModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
     #uploadModal.active { display: flex; }
@@ -37,11 +38,13 @@
     .preview img { max-width: 100%; max-height: 100%; }
     .preview button { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 4px; font-size: 12px; padding: 2px 4px; cursor: pointer; }
     .rotate-btn { bottom: 2px; left: 2px; top: auto; right: auto; }
+
     /* Share Modal */
     #shareModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2100; justify-content: center; align-items: center; }
     #shareModal.active { display: flex; }
     .share-box { background: #fff; padding: 1rem; border-radius: 8px; max-width: 90%; width: 300px; }
     .share-box a { display: block; margin: 0.5rem 0; color: #3498db; text-decoration: none; }
+
     /* Toast Notification */
     #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 3000; }
     #toast.show { opacity: 1; }
@@ -54,8 +57,7 @@
 
   <div id="uploadModal">
     <div class="modal-content">
-      <h2>Upload Files</h2>
-      <div id="dropzone" class="dropzone">Drag & drop files here or click to select</div>
+      <h2>Upload Files</n      <div id="dropzone" class="dropzone">Drag & drop files here or click to select</div>
       <input type="file" id="fileInput" multiple accept="image/*">
       <div id="previewGrid"></div>
       <button id="uploadBtn" class="btn upload">Upload</button>
@@ -84,6 +86,36 @@
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 3000);
     }
+
+    // Enforce login before showing upload modal
+    document.getElementById('openUpload').onclick = async () => {
+      try {
+        const res = await fetch('/cdn-cgi/access/get-identity');
+        if (!res.ok) throw new Error('Not logged in');
+        const data = await res.json();
+        if (!data.email) throw new Error('No identity');
+        document.getElementById('uploadModal').classList.add('active');
+      } catch (e) {
+        window.location.href = '/cdn-cgi/access/login';
+      }
+    };
+
+    document.getElementById('closeModal').onclick = () => {
+      document.getElementById('uploadModal').classList.remove('active');
+      filesToUpload = [];
+      document.getElementById('previewGrid').innerHTML = '';
+      document.getElementById('dropzone').textContent = 'Drag & drop files here or click to select';
+    };
+
+    document.getElementById('dropzone').onclick = () => document.getElementById('fileInput').click();
+    document.getElementById('dropzone').ondragover = e => { e.preventDefault(); e.currentTarget.classList.add('hover'); };
+    document.getElementById('dropzone').ondragleave = e => e.currentTarget.classList.remove('hover');
+    document.getElementById('dropzone').ondrop = e => {
+      e.preventDefault(); e.currentTarget.classList.remove('hover');
+      filesToUpload = Array.from(e.dataTransfer.files);
+      renderPreviewGrid();
+    };
+    document.getElementById('fileInput').onchange = e => { filesToUpload = Array.from(e.target.files); renderPreviewGrid(); };
 
     function renderPreviewGrid() {
       const previewGrid = document.getElementById('previewGrid');
@@ -135,6 +167,22 @@
       });
     }
 
+    document.getElementById('uploadBtn').onclick = async () => {
+      if (!filesToUpload.length) return;
+      const btn = document.getElementById('uploadBtn');
+      btn.disabled = true;
+      btn.textContent = 'Uploading...';
+      for (const file of filesToUpload) {
+        const url = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
+        await fetch(url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      }
+      btn.disabled = false;
+      btn.textContent = 'Upload';
+      document.getElementById('closeModal').click();
+      loadGallery();
+      showToast('Upload complete!');
+    };
+
     async function loadGallery() {
       const res = await fetch(`${API_BASE}/api/gallery`);
       const items = await res.json();
@@ -153,81 +201,14 @@
         card.appendChild(media);
 
         const info = document.createElement('div'); info.className = 'info';
-        const closeBtn = document.createElement('button'); closeBtn.className = 'close-btn'; closeBtn.textContent = '×';
-        closeBtn.onclick = e => { e.stopPropagation(); card.classList.remove('active'); };
-        info.appendChild(closeBtn);
-        const fname = document.createElement('div'); fname.className = 'filename'; fname.contentEditable = true; fname.textContent = item.key;
-        fname.onblur = async () => {
-          const newName = fname.textContent.trim();
-          if (newName && newName !== item.key) {
-            await fetch(`${API_BASE}/api/rename?old=${encodeURIComponent(item.key)}&new=${encodeURIComponent(newName)}`, { method: 'POST' });
-            loadGallery(); showToast('Renamed file');
-          }
-        };
-        info.appendChild(fname);
-        const btnRow = document.createElement('div'); btnRow.className = 'btn-row';
-        const removeBtn = document.createElement('button'); removeBtn.className = 'remove-btn'; removeBtn.textContent = 'Remove';
-        removeBtn.onclick = async e => {
-          e.stopPropagation();
-          if (confirm(`Remove ${item.key}?`)) {
-            await fetch(`${API_BASE}/api/delete?group=root&filename=${encodeURIComponent(item.key)}`, { method: 'DELETE' });
-            loadGallery(); showToast('Removed file');
-          }
-        };
-        const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.textContent = 'Share';
-        shareBtn.onclick = e => {
-          e.stopPropagation();
-          currentUrl = `${API_BASE}${item.url}`; showShareModal();
-        };
-        btnRow.appendChild(removeBtn); btnRow.appendChild(shareBtn);
-        info.appendChild(btnRow);
-        card.appendChild(info); container.appendChild(card);
+        const closeBtn2 = document.createElement('button'); closeBtn2.className = 'close-btn'; closeBtn2.textContent = '×';
+        closeBtn2.onclick = e => { e.stopPropagation(); card.classList.remove('active'); };
+        info.appendChild(closeBtn2);
+        card.appendChild(info);
+        container.appendChild(card);
       });
     }
 
-    function showShareModal() {
-      const modal = document.getElementById('shareModal');
-      const links = document.getElementById('shareLinks');
-      links.innerHTML = '';
-      const url = encodeURIComponent(currentUrl);
-      const text = encodeURIComponent('Check this out!');
-      const platforms = [
-        { name: 'Email', href: `mailto:?subject=${text}&body=${url}` },
-        { name: 'SMS', href: `sms:?body=${url}` },
-        { name: 'Twitter', href: `https://twitter.com/intent/tweet?url=${url}&text=${text}`, target: '_blank' },
-        { name: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${url}`, target: '_blank' },
-        { name: 'WhatsApp', href: `https://wa.me/?text=${url}`, target: '_blank' },
-        { name: 'LinkedIn', href: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`, target: '_blank' }
-      ];
-      platforms.forEach(p => {
-        const a = document.createElement('a'); a.textContent = p.name; a.href = p.href; if (p.target) a.target = p.target; links.appendChild(a);
-      });
-      document.getElementById('copyLinkBtn').onclick = () => {
-        navigator.clipboard.writeText(currentUrl).then(() => showToast('Link copied to clipboard!'));
-      };
-      modal.classList.add('active');
-    }
-
-    document.getElementById('openUpload').onclick = () => document.getElementById('uploadModal').classList.add('active');
-    document.getElementById('closeModal').onclick = () => {
-      document.getElementById('uploadModal').classList.remove('active');
-      filesToUpload = []; document.getElementById('previewGrid').innerHTML = '';
-      document.getElementById('dropzone').textContent = 'Drag & drop files here or click to select';
-    };
-    document.getElementById('dropzone').onclick = () => document.getElementById('fileInput').click();
-    document.getElementById('dropzone').ondragover = e => { e.preventDefault(); e.currentTarget.classList.add('hover'); };
-    document.getElementById('dropzone').ondragleave = e => e.currentTarget.classList.remove('hover');
-    document.getElementById('dropzone').ondrop = e => { e.preventDefault(); e.currentTarget.classList.remove('hover'); filesToUpload = Array.from(e.dataTransfer.files); renderPreviewGrid(); };
-    document.getElementById('fileInput').onchange = e => { filesToUpload = Array.from(e.target.files); renderPreviewGrid(); };
-    document.getElementById('uploadBtn').onclick = async () => {
-      if (!filesToUpload.length) return;
-      const btn = document.getElementById('uploadBtn'); btn.disabled = true; btn.textContent = 'Uploading...';
-      for (const file of filesToUpload) {
-        const url = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
-        await fetch(url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
-      }
-      btn.disabled = false; btn.textContent = 'Upload'; document.getElementById('closeModal').click(); loadGallery(); showToast('Upload complete!');
-    };
     window.addEventListener('DOMContentLoaded', loadGallery);
   </script>
 </body>
