@@ -13,34 +13,23 @@
     @media(min-width:600px) { #gallery { grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); } }
     .card { background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); cursor:pointer; position:relative; }
     .media { width:100%; height:200px; object-fit:cover; }
-    .info { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); color:#fff; padding:1rem; box-sizing:border-box; }
-    .card.active .info { display:flex; flex-direction:column; justify-content:flex-end; }
-    .filename { font-weight:600; outline:none; margin-bottom:0.5rem; }
+    .info { display:none; position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); color:#fff; padding:1rem; box-sizing:border-box; }
+    .card.active { position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.9); overflow:auto; padding:2rem; display:flex; flex-direction:column; align-items:center; }
+    .card.active .media { max-width:90vw; max-height:60vh; width:auto; height:auto; border-radius:8px; margin-bottom:1rem; }
+    .card.active .info { display:block; background:transparent; position:static; width:auto; padding:0; margin-top:1rem; }
+    .filename { font-weight:600; outline:none; margin-bottom:0.5rem; color:#fff; }
     .tags { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem; }
     .tag-input { flex:1; min-width:60px; border:none; border-radius:4px; padding:0.3rem; font-size:0.9rem; }
-    .remove-btn { background:#e74c3c; color:#fff; border:none; padding:0.5rem; font-size:0.9rem; border-radius:4px; width:100%; cursor:pointer; }
-    /* Fullscreen expand */
-    .card.active {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      z-index: 1000;
-      background: rgba(0,0,0,0.9);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      overflow: auto;
-    }
-    .card.active .media {
-      max-width: 90%;
-      max-height: 80%;
-      height: auto;
-    }
-    .card.active .info {
-      position: absolute;
-      bottom: 10px; left: 10px; right: 10px; top: auto;
-      background: transparent;
-    }
+    .btn-row { display:flex; gap:0.5rem; margin-top:0.5rem; }
+    .remove-btn { background:#e74c3c; color:#fff; border:none; padding:0.4rem; font-size:0.9rem; border-radius:4px; cursor:pointer; flex:1; }
+    .share-btn { background:#3498db; color:#fff; border:none; padding:0.4rem; font-size:0.9rem; border-radius:4px; cursor:pointer; flex:1; }
+    .close-btn { position:absolute; top:10px; right:10px; background:transparent; color:#fff; border:none; font-size:1.5rem; cursor:pointer; }
+    /* Modal Overlay */
+    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:1100; justify-content:center; align-items:center; }
+    .modal.active { display:flex; }
+    .modal-content { background:#fff; border-radius:8px; padding:1rem; max-width:90%; width:300px; }
+    .modal-content h3 { margin-top:0; }
+    .modal-content a { display:block; margin:0.5rem 0; text-decoration:none; color:#3498db; }
   </style>
 </head>
 <body>
@@ -53,8 +42,18 @@
 
   <div id="gallery"></div>
 
+  <!-- Share Modal -->
+  <div id="shareModal" class="modal">
+    <div class="modal-content">
+      <button id="modalClose" class="close-btn">×</button>
+      <h3>Share</h3>
+      <div id="shareLinks"></div>
+    </div>
+  </div>
+
   <script>
     const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
+    let currentUrl = '';
 
     async function loadGallery() {
       const res = await fetch(`${API_BASE}/api/gallery`);
@@ -66,10 +65,10 @@
         const card = document.createElement('div');
         card.className = 'card';
 
-        // Toggle info and fullscreen on click
-        card.onclick = () => card.classList.toggle('active');
+        card.onclick = () => {
+          card.classList.toggle('active');
+        };
 
-        // Media
         if (item.key.match(/\.(mp4|mov|webm)$/i)) {
           const video = document.createElement('video');
           video.src = `${API_BASE}${item.url}`;
@@ -84,11 +83,18 @@
           card.appendChild(img);
         }
 
-        // Info Overlay
         const info = document.createElement('div');
         info.className = 'info';
 
-        // Editable filename
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'close-btn';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = (e) => {
+          e.stopPropagation();
+          card.classList.remove('active');
+        };
+        info.appendChild(closeBtn);
+
         const fname = document.createElement('div');
         fname.className = 'filename';
         fname.contentEditable = true;
@@ -97,12 +103,11 @@
           const newName = fname.textContent.trim();
           if (newName && newName !== item.key) {
             await fetch(`${API_BASE}/api/rename?old=${encodeURIComponent(item.key)}&new=${encodeURIComponent(newName)}`, { method: 'POST' });
-            await loadGallery();
+            loadGallery();
           }
         };
         info.appendChild(fname);
 
-        // Tags input
         const tagsDiv = document.createElement('div');
         tagsDiv.className = 'tags';
         const tagInput = document.createElement('input');
@@ -122,7 +127,9 @@
         tagsDiv.appendChild(tagInput);
         info.appendChild(tagsDiv);
 
-        // Remove button
+        const btnRow = document.createElement('div');
+        btnRow.className = 'btn-row';
+
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-btn';
         removeBtn.textContent = 'Remove';
@@ -130,15 +137,57 @@
           e.stopPropagation();
           if (confirm(`Remove ${item.key}?`)) {
             await fetch(`${API_BASE}/api/delete?filename=${encodeURIComponent(item.key)}`, { method: 'DELETE' });
-            await loadGallery();
+            loadGallery();
           }
         };
-        info.appendChild(removeBtn);
+        btnRow.appendChild(removeBtn);
 
+        const shareBtn = document.createElement('button');
+        shareBtn.className = 'share-btn';
+        shareBtn.textContent = 'Share';
+        shareBtn.onclick = (e) => {
+          e.stopPropagation();
+          currentUrl = `${API_BASE}${item.url}`;
+          showShareModal();
+        };
+        btnRow.appendChild(shareBtn);
+
+        info.appendChild(btnRow);
         card.appendChild(info);
         container.appendChild(card);
       });
     }
+
+    function showShareModal() {
+      const modal = document.getElementById('shareModal');
+      const links = document.getElementById('shareLinks');
+      links.innerHTML = '';
+      const url = encodeURIComponent(currentUrl);
+      const text = encodeURIComponent('Check this out!');
+
+      const platforms = [
+        { name: 'Email', href: `mailto:?subject=${text}&body=${url}` },
+        { name: 'SMS', href: `sms:?body=${url}` },
+        { name: 'Twitter', href: `https://twitter.com/intent/tweet?url=${url}&text=${text}`, target:'_blank' },
+        { name: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${url}`, target:'_blank' },
+        { name: 'WhatsApp', href: `https://wa.me/?text=${url}`, target:'_blank' },
+        { name: 'LinkedIn', href: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`, target:'_blank' }
+      ];
+
+      platforms.forEach(p => {
+        const a = document.createElement('a');
+        a.textContent = p.name;
+        a.href = p.href;
+        if(p.target) a.target = p.target;
+        links.appendChild(a);
+      });
+
+      modal.classList.add('active');
+    }
+
+    document.getElementById('modalClose').onclick = () => {
+      document.getElementById('shareModal').classList.remove('active');
+    };
 
     document.getElementById('uploadBtn').addEventListener('click', async (e) => {
       const btn = e.target;
@@ -152,7 +201,7 @@
 
       btn.disabled = false; btn.textContent = 'Upload';
       document.getElementById('fileInput').value = '';
-      await loadGallery();
+      loadGallery();
     });
 
     window.addEventListener('DOMContentLoaded', loadGallery);
