@@ -78,7 +78,16 @@ MIT – use, remix, and deploy freely.
 
 🙌 Credits
 <<<<<<< HEAD
+<<<<<<< HEAD
 Built with 💙 by @jimi421 and powered by Cloudflare.
 =======
 Built with 💙 by @jimi421 and powered by Cloudflare.
 >>>>>>> fed0070 (Add clean README.md to project root)
+=======
+Built with 💙 by @jimi421 and powered by Cloudflare.
+### 🌐 Live Demo
+
+Check it out here:  
+**[https://jimi421-art.pages.dev](https://jimi421-art.pages.dev)**
+
+>>>>>>> 0b59405 (Add live site link to README)
