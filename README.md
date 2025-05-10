@@ -90,4 +90,13 @@ Built with 💙 by @jimi421 and powered by Cloudflare.
 Check it out here:  
 **[https://jimi421-art.pages.dev](https://jimi421-art.pages.dev)**
 
+<<<<<<< HEAD
 >>>>>>> 0b59405 (Add live site link to README)
+=======
+
+### 🌐 Live Demo
+
+Check it out here:  
+**[https://jimi421-art.pages.dev](https://jimi421-art.pages.dev)**
+
+>>>>>>> d7798cf (Add live site link to README)
