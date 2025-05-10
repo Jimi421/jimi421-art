@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+=======
+📄 README.md
+markdown
+Copy
+Edit
+>>>>>>> fed0070 (Add clean README.md to project root)
 # 🎨 Jimi421 Art Gallery
 
 A modern, mobile-friendly web app for uploading, previewing, and sharing personal artwork or photos. Built on Cloudflare’s free stack using:
@@ -70,4 +77,8 @@ wrangler.example.toml is provided for safe sharing.
 MIT – use, remix, and deploy freely.
 
 🙌 Credits
+<<<<<<< HEAD
 Built with 💙 by @jimi421 and powered by Cloudflare.
+=======
+Built with 💙 by @jimi421 and powered by Cloudflare.
+>>>>>>> fed0070 (Add clean README.md to project root)
