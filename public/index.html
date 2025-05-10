@@ -5,100 +5,201 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jimi421 Art Gallery</title>
   <style>
-    body { margin:0; font-family:'Segoe UI',sans-serif; background:#f7f7f7; color:#222; }
-    h1 { text-align:center; padding:1rem 0; font-size:2rem; color:#444; }
-    #gallery { display:grid; grid-template-columns:1fr; gap:1rem; padding:1rem; }
-    @media(min-width:600px) { #gallery { grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); } }
-    .card { background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.1); cursor:default; position:relative; }
-    .media { width:100%; height:200px; object-fit:cover; }
-    /* Floating Upload Button */
-    #openUpload { position:fixed; bottom:20px; right:20px; background:#3498db; color:#fff; border:none; border-radius:50%; width:60px; height:60px; font-size:2rem; line-height:0; cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,0.2); }
-    /* Upload Modal */
-    #uploadModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; }
-    #uploadModal.active { display:flex; }
-    .modal-content { background:#fff; border-radius:8px; padding:1.5rem; width:90%; max-width:400px; box-shadow:0 2px 12px rgba(0,0,0,0.2); }
-    .modal-content h2 { margin-top:0; }
-    .dropzone { border:2px dashed #bbb; border-radius:8px; padding:2rem; text-align:center; color:#888; margin-bottom:1rem; }
-    .dropzone.hover { border-color:#3498db; color:#3498db; }
-    #fileInput { display:none; }
-    .btn { display:block; width:100%; padding:0.6rem; font-size:1rem; border-radius:4px; border:none; cursor:pointer; margin-top:0.5rem; }
-    .btn.upload { background:#2ecc71; color:#fff; }
-    .btn.close { background:#e74c3c; color:#fff; }
+    body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f7f7f7; color: #222; }
+    h1 { text-align: center; padding: 1rem 0; font-size: 2rem; color: #444; }
+    #gallery { display: grid; grid-template-columns: 1fr; gap: 1rem; padding: 1rem; }
+    @media(min-width:600px) { #gallery { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
+    .card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; position: relative; }
+    .media { width: 100%; height: 200px; object-fit: cover; }
+    .card.active { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.9); overflow: auto; padding: 2rem 1rem; display: flex; flex-direction: column; align-items: center; }
+    .card.active .media { max-width: 90vw; max-height: 60vh; width: auto; height: auto; border-radius: 8px; margin-bottom: 1rem; }
+    .info { display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; color: #fff; padding: 1rem; box-sizing: border-box; }
+    .card.active .info { display: flex; flex-direction: column; align-items: center; position: static; background: transparent; width: auto; margin-top: 1rem; }
+    .filename { font-weight: 600; outline: none; margin-bottom: 0.5rem; color: #fff; }
+    .btn-row { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .remove-btn, .share-btn { padding: 0.4rem 0.8rem; font-size: 0.9rem; border-radius: 4px; cursor: pointer; border: none; }
+    .remove-btn { background: #e74c3c; color: #fff; }
+    .share-btn { background: #3498db; color: #fff; }
+    .close-btn { position: absolute; top: 10px; right: 10px; background: transparent; color: #fff; border: none; font-size: 1.5rem; cursor: pointer; }
+    #openUpload { position: fixed; bottom: 20px; right: 20px; background: #2ecc71; color: #fff; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 2rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    #uploadModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
+    #uploadModal.active { display: flex; }
+    .modal-content { background: #fff; border-radius: 8px; padding: 1.5rem; width: 90%; max-width: 400px; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
+    .dropzone { border: 2px dashed #bbb; border-radius: 8px; padding: 2rem; text-align: center; color: #888; margin-bottom: 1rem; }
+    .dropzone.hover { border-color: #2ecc71; color: #2ecc71; }
+    #fileInput { display: none; }
+    .btn { display: block; width: 100%; padding: 0.6rem; font-size: 1rem; border-radius: 4px; border: none; cursor: pointer; margin-top: 0.5rem; }
+    .btn.upload { background: #2ecc71; color: #fff; }
+    .btn.close { background: #e74c3c; color: #fff; }
+    #shareModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2100; justify-content: center; align-items: center; }
+    #shareModal.active { display: flex; }
+    .share-box { background: #fff; padding: 1rem; border-radius: 8px; max-width: 90%; width: 300px; }
+    .share-box a { display: block; margin: 0.5rem 0; color: #3498db; text-decoration: none; }
   </style>
 </head>
 <body>
   <h1>Jimi421 Art Gallery</h1>
   <div id="gallery"></div>
-
-  <!-- Floating Upload Button -->
   <button id="openUpload">+</button>
 
-  <!-- Upload Modal -->
   <div id="uploadModal">
     <div class="modal-content">
       <h2>Upload Files</h2>
-      <div id="dropzone" class="dropzone">Drag &amp; drop files here or click to select</div>
-      <input type="file" id="fileInput" multiple accept="image/*,video/*" />
+      <div id="dropzone" class="dropzone">Drag & drop files here or click to select</div>
+      <input type="file" id="fileInput" multiple accept="image/*,video/*">
       <button id="uploadBtn" class="btn upload">Upload</button>
       <button id="closeModal" class="btn close">Cancel</button>
     </div>
   </div>
 
+  <div id="shareModal">
+    <div class="share-box">
+      <button class="close-btn" onclick="document.getElementById('shareModal').classList.remove('active')">×</button>
+      <h3>Share</h3>
+      <div id="shareLinks"></div>
+      <button id="copyLinkBtn" class="btn upload" style="margin-top: 1rem;">📋 Copy Link</button>
+    </div>
+  </div>
+
   <script>
     const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
-    let filesToUpload = [];
+    let filesToUpload = [], currentUrl = '';
 
     async function loadGallery() {
       const res = await fetch(`${API_BASE}/api/gallery`);
       const items = await res.json();
       const container = document.getElementById('gallery');
       container.innerHTML = '';
+
       items.reverse().forEach(item => {
-        const card = document.createElement('div'); card.className = 'card';
-        if (item.key.match(/\.(mp4|mov|webm)$/i)) {
-          const video = document.createElement('video'); video.src = `${API_BASE}${item.url}`; video.controls = true; video.className = 'media'; card.appendChild(video);
-        } else {
-          const img = document.createElement('img'); img.src = `${API_BASE}${item.url}`; img.alt = item.key; img.className = 'media'; card.appendChild(img);
-        }
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.onclick = () => card.classList.toggle('active');
+
+        const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
+        const media = document.createElement(isVideo ? 'video' : 'img');
+        media.src = `${API_BASE}${item.url}`;
+        if (isVideo) media.controls = true;
+        media.className = 'media';
+        card.appendChild(media);
+
+        const info = document.createElement('div');
+        info.className = 'info';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'close-btn';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = e => { e.stopPropagation(); card.classList.remove('active'); };
+        info.appendChild(closeBtn);
+
+        const fname = document.createElement('div');
+        fname.className = 'filename';
+        fname.contentEditable = true;
+        fname.textContent = item.key;
+        fname.onblur = async () => {
+          const newName = fname.textContent.trim();
+          if (newName && newName !== item.key) {
+            await fetch(`${API_BASE}/api/rename?old=${encodeURIComponent(item.key)}&new=${encodeURIComponent(newName)}`, { method: 'POST' });
+            loadGallery();
+          }
+        };
+        info.appendChild(fname);
+
+        const btnRow = document.createElement('div');
+        btnRow.className = 'btn-row';
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = async e => {
+          e.stopPropagation();
+          if (confirm(`Remove ${item.key}?`)) {
+            await fetch(`${API_BASE}/api/delete?filename=${encodeURIComponent(item.key)}`, { method: 'DELETE' });
+            loadGallery();
+          }
+        };
+        btnRow.appendChild(removeBtn);
+
+        const shareBtn = document.createElement('button');
+        shareBtn.className = 'share-btn';
+        shareBtn.textContent = 'Share';
+        shareBtn.onclick = e => {
+          e.stopPropagation();
+          currentUrl = `${API_BASE}${item.url}`;
+          showShareModal();
+        };
+        btnRow.appendChild(shareBtn);
+
+        info.appendChild(btnRow);
+        card.appendChild(info);
         container.appendChild(card);
       });
     }
 
-    // Modal controls
-    const openBtn = document.getElementById('openUpload');
-    const modal = document.getElementById('uploadModal');
-    const closeBtn = document.getElementById('closeModal');
-    const dropzone = document.getElementById('dropzone');
-    const fileInput = document.getElementById('fileInput');
-    const uploadBtn = document.getElementById('uploadBtn');
+    function showShareModal() {
+      const modal = document.getElementById('shareModal');
+      const links = document.getElementById('shareLinks');
+      links.innerHTML = '';
+      const url = encodeURIComponent(currentUrl);
+      const text = encodeURIComponent('Check this out!');
 
-    openBtn.onclick = () => modal.classList.add('active');
-    closeBtn.onclick = () => { modal.classList.remove('active'); filesToUpload = []; dropzone.textContent = 'Drag & drop files here or click to select'; };
+      const platforms = [
+        { name: 'Email', href: `mailto:?subject=${text}&body=${url}` },
+        { name: 'SMS', href: `sms:?body=${url}` },
+        { name: 'Twitter', href: `https://twitter.com/intent/tweet?url=${url}&text=${text}`, target: '_blank' },
+        { name: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${url}`, target: '_blank' },
+        { name: 'WhatsApp', href: `https://wa.me/?text=${url}`, target: '_blank' },
+        { name: 'LinkedIn', href: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`, target: '_blank' }
+      ];
 
-    dropzone.onclick = () => fileInput.click();
-    dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add('hover'); };
-    dropzone.ondragleave = () => dropzone.classList.remove('hover');
-    dropzone.ondrop = (e) => {
-      e.preventDefault(); dropzone.classList.remove('hover');
+      platforms.forEach(p => {
+        const a = document.createElement('a');
+        a.textContent = p.name;
+        a.href = p.href;
+        if (p.target) a.target = p.target;
+        links.appendChild(a);
+      });
+
+      document.getElementById('copyLinkBtn').onclick = () => {
+        navigator.clipboard.writeText(currentUrl).then(() => {
+          alert('Link copied to clipboard!');
+        });
+      };
+
+      modal.classList.add('active');
+    }
+
+    document.getElementById('openUpload').onclick = () => document.getElementById('uploadModal').classList.add('active');
+    document.getElementById('closeModal').onclick = () => {
+      document.getElementById('uploadModal').classList.remove('active');
+      filesToUpload = [];
+      document.getElementById('dropzone').textContent = 'Drag & drop files here or click to select';
+    };
+    document.getElementById('dropzone').onclick = () => document.getElementById('fileInput').click();
+    document.getElementById('dropzone').ondragover = e => { e.preventDefault(); e.currentTarget.classList.add('hover'); };
+    document.getElementById('dropzone').ondragleave = e => e.currentTarget.classList.remove('hover');
+    document.getElementById('dropzone').ondrop = e => {
+      e.preventDefault();
+      e.currentTarget.classList.remove('hover');
       filesToUpload = Array.from(e.dataTransfer.files);
-      dropzone.textContent = filesToUpload.map(f => f.name).join(', ');
+      e.currentTarget.textContent = filesToUpload.map(f => f.name).join(', ');
+    };
+    document.getElementById('fileInput').onchange = e => {
+      filesToUpload = Array.from(e.target.files);
+      document.getElementById('dropzone').textContent = filesToUpload.map(f => f.name).join(', ');
     };
 
-    fileInput.onchange = () => {
-      filesToUpload = Array.from(fileInput.files);
-      dropzone.textContent = filesToUpload.map(f => f.name).join(', ');
-    };
-
-    uploadBtn.onclick = async () => {
+    document.getElementById('uploadBtn').onclick = async () => {
       if (filesToUpload.length === 0) return;
-      uploadBtn.disabled = true; uploadBtn.textContent = 'Uploading...';
+      const btn = document.getElementById('uploadBtn');
+      btn.disabled = true; btn.textContent = 'Uploading...';
       for (const file of filesToUpload) {
         const url = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
         await fetch(url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
       }
-      uploadBtn.disabled = false; uploadBtn.textContent = 'Upload';
-      closeBtn.click();
-      await loadGallery();
+      btn.disabled = false; btn.textContent = 'Upload';
+      document.getElementById('closeModal').click();
+      loadGallery();
     };
 
     window.addEventListener('DOMContentLoaded', loadGallery);
