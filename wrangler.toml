@@ -1,0 +1,16 @@
+name = "jimi421-art"
+type = "javascript"
+account_id = "<YOUR_ACCOUNT_ID>"
+compatibility_date = "2025-05-09"
+
+[build]
+upload = { format = "service-worker", dir = "worker" }
+
+[bindings]
+type = "r2_bucket"
+name = "ART_BUCKET"
+bucket_name = "jimi421-art-r2"
+
+[[kv_namespaces]]
+binding = "GALLERY_KV"
+id = "<YOUR_KV_NAMESPACE_ID>"

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Art Gallery</title>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    #gallery { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap:1rem; }
+    .thumb { width:100%; height:auto; object-fit:cover; }
+    #upload { margin-top:2rem; }
+  </style>
+</head>
+<body>
+  <h1>My Art Gallery</h1>
+  <div id="gallery"></div>
+  <div id="upload">
+    <input type="file" id="fileInput" multiple />
+    <button id="uploadBtn">Upload</button>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
