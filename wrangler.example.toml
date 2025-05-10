@@ -1,0 +1,15 @@
+# Example Wrangler config for Cloudflare Worker + R2 + KV
+
+name = "your-project-name"
+account_id = "your-cloudflare-account-id"
+compatibility_date = "2025-05-10"
+main = "worker/index.js"
+
+[[kv_namespaces]]
+binding = "GALLERY_KV"
+id = "your-kv-namespace-id"
+
+[[r2_buckets]]
+binding = "ART_BUCKET"
+bucket_name = "your-r2-bucket-name"
+
