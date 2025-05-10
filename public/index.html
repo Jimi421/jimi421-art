@@ -2,22 +2,83 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My Art Gallery</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jimi421 Art Gallery</title>
   <style>
-    body { font-family: sans-serif; margin: 2rem; }
-    #gallery { display: grid; grid-template-columns: repeat(auto-fill,minmax(200px,1fr)); gap:1rem; }
-    .thumb { width:100%; height:auto; object-fit:cover; }
-    #upload { margin-top:2rem; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f7f7f7;
+      color: #222;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: #444;
+    }
+    h2 {
+      margin-top: 2rem;
+      font-size: 1.5rem;
+      color: #666;
+    }
+    #preview, #gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .thumb {
+      width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .thumb:hover {
+      transform: scale(1.03);
+    }
+    #upload {
+      margin-top: 2rem;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.05);
+    }
+    #upload input[type=file] {
+      padding: 0.5rem;
+      font-size: 1rem;
+    }
+    #uploadBtn {
+      margin-top: 1rem;
+      padding: 0.7rem 1.5rem;
+      font-size: 1rem;
+      background: #222;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #uploadBtn:hover {
+      background: #444;
+    }
   </style>
 </head>
 <body>
-  <h1>My Art Gallery</h1>
-  <div id="gallery"></div>
+  <h1>🎨 Jimi421 Art Gallery</h1>
+
   <div id="upload">
+    <h2>Upload New Art</h2>
     <input type="file" id="fileInput" multiple />
+    <br />
     <button id="uploadBtn">Upload</button>
   </div>
+
+  <h2>Upload Preview</h2>
+  <div id="preview"></div>
+
+  <h2>Gallery</h2>
+  <div id="gallery"></div>
+
   <script src="script.js"></script>
 </body>
 </html>

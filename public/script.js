@@ -1,10 +1,10 @@
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 
-// 🖼 Preview selected images before upload
+// Display previews for selected files
 document.getElementById('fileInput').addEventListener('change', function () {
   const files = this.files;
-  const container = document.getElementById('gallery');
-  container.innerHTML = ''; // Optional: reset
+  const container = document.getElementById('preview');
+  container.innerHTML = '';
   for (const file of files) {
     const reader = new FileReader();
     reader.onload = function (e) {
@@ -17,8 +17,12 @@ document.getElementById('fileInput').addEventListener('change', function () {
   }
 });
 
-// 🚀 Upload each file to Worker via PUT
+// Upload files and refresh gallery
 document.getElementById('uploadBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+
   const files = document.getElementById('fileInput').files;
   for (const file of files) {
     const uploadURL = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
@@ -28,16 +32,21 @@ document.getElementById('uploadBtn').addEventListener('click', async () => {
       body: file
     });
   }
+
+  btn.textContent = 'Upload';
+  btn.disabled = false;
+  document.getElementById('preview').innerHTML = '';
   loadGallery();
 });
 
-// 🧱 Load gallery from Worker / R2
+// Load gallery from Worker
 async function loadGallery() {
   const res = await fetch(`${API_BASE}/api/gallery`);
   const items = await res.json();
   const container = document.getElementById('gallery');
   container.innerHTML = '';
-  items.forEach(item => {
+  // Show newest first
+  items.reverse().forEach(item => {
     const img = document.createElement('img');
     img.src = item.url;
     img.className = 'thumb';
@@ -45,5 +54,5 @@ async function loadGallery() {
   });
 }
 
-// ⏱ Load on page open
+// On page load
 window.addEventListener('DOMContentLoaded', loadGallery);
