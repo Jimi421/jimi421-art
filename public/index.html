@@ -6,7 +6,11 @@
   <title>Jimi421 Art Gallery</title>
   <style>
     body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f7f7f7; color: #222; }
-    h1 { text-align: center; padding: 1rem 0; font-size: 2rem; color: #444; }
+    header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; padding: 1rem 2rem; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; }
+    header h1 { margin: 0; font-size: 2rem; color: #444; flex: 1; }
+    #groupControls { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-left: 1rem; }
+    #groupControls select, #groupControls input { padding: 0.5rem; font-size: 1rem; }
+    #groupControls button { padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; }
     #gallery { display: grid; grid-template-columns: 1fr; gap: 1rem; padding: 1rem; }
     @media(min-width:600px) { #gallery { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
     .card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; position: relative; }
@@ -48,15 +52,23 @@
   </style>
 </head>
 <body>
-  <h1>Jimi421 Art Gallery</h1>
+  <header>
+    <h1>Jimi421 Art Gallery</h1>
+    <div id="groupControls">
+      <select id="groupSelect"><option value="root">All</option></select>
+      <input type="text" id="groupInput" placeholder="New group name" />
+      <button id="applyGroup">Filter/Set Group</button>
+    </div>
+  </header>
+
   <div id="gallery"></div>
   <button id="openUpload">+</button>
 
   <div id="uploadModal">
     <div class="modal-content">
-      <h2>Upload Files</h2>
+      <h2>Upload Files to <span id="modalGroup">All</span></h2>
       <div id="dropzone" class="dropzone">Drag & drop files here or click to select</div>
-      <input type="file" id="fileInput" multiple accept="image/*">
+      <input type="file" id="fileInput" multiple accept="image/*,video/*">
       <div id="previewGrid"></div>
       <button id="uploadBtn" class="btn upload">Upload</button>
       <button id="closeModal" class="btn close">Cancel</button>
@@ -76,159 +88,91 @@
 
   <script>
     const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
-    let filesToUpload = [], currentUrl = '';
+    let filesToUpload = [], currentUrl = ''; let currentGroup = 'root';
+
+    async function loadGroupsList() {
+      const res = await fetch(`${API_BASE}/api/groups`);
+      const list = await res.json();
+      const sel = document.getElementById('groupSelect');
+      sel.innerHTML = '<option value="root">All</option>';
+      list.forEach(g => {
+        const opt = document.createElement('option'); opt.value = g; opt.textContent = g;
+        sel.appendChild(opt);
+      });
+    }
+
+    function applyGroup() {
+      const custom = document.getElementById('groupInput').value.trim();
+      const sel = document.getElementById('groupSelect').value;
+      currentGroup = custom || sel || 'root';
+      document.getElementById('modalGroup').textContent = currentGroup;
+      loadGallery();
+    }
 
     function showToast(msg) {
       const toast = document.getElementById('toast');
-      toast.textContent = msg;
-      toast.classList.add('show');
+      toast.textContent = msg; toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 3000);
     }
 
     function renderPreviewGrid() {
-      const previewGrid = document.getElementById('previewGrid');
-      previewGrid.innerHTML = '';
-      filesToUpload.forEach((file, index) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const div = document.createElement('div');
-          div.className = 'preview';
-          const img = document.createElement('img');
-          img.src = reader.result;
-          div.appendChild(img);
-
-          const removeBtn = document.createElement('button');
-          removeBtn.textContent = '✕';
-          removeBtn.onclick = () => {
-            filesToUpload.splice(index, 1);
-            renderPreviewGrid();
-            showToast('Removed from preview');
-          };
-          div.appendChild(removeBtn);
-
-          const rotateBtn = document.createElement('button');
-          rotateBtn.textContent = '⟳';
-          rotateBtn.className = 'rotate-btn';
-          rotateBtn.onclick = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const image = new Image();
-            image.onload = () => {
-              canvas.width = image.height;
-              canvas.height = image.width;
-              ctx.translate(canvas.width/2, canvas.height/2);
-              ctx.rotate(90 * Math.PI / 180);
-              ctx.drawImage(image, -image.width/2, -image.height/2);
-              canvas.toBlob(blob => {
-                filesToUpload[index] = new File([blob], file.name, { type: file.type });
-                renderPreviewGrid();
-                showToast('Rotated preview');
-              }, file.type);
-            };
-            image.src = reader.result;
-          };
-          div.appendChild(rotateBtn);
-
-          previewGrid.appendChild(div);
-        };
-        reader.readAsDataURL(file);
+      const pg = document.getElementById('previewGrid'); pg.innerHTML = '';
+      filesToUpload.forEach((file,i) => {
+        const r = new FileReader(); r.onload = () => {
+          const div = document.createElement('div'); div.className = 'preview';
+          const img = document.createElement('img'); img.src = r.result; div.appendChild(img);
+          const rem = document.createElement('button'); rem.textContent = '✕'; rem.onclick = () => { filesToUpload.splice(i,1); renderPreviewGrid(); showToast('Removed');}; div.appendChild(rem);
+          pg.appendChild(div);
+        }; r.readAsDataURL(file);
       });
     }
 
-    async function loadGallery() {
-      const res = await fetch(`${API_BASE}/api/gallery`);
-      const items = await res.json();
-      const container = document.getElementById('gallery');
-      container.innerHTML = '';
-      items.reverse().forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.onclick = () => card.classList.toggle('active');
-
-        const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
-        const media = document.createElement(isVideo ? 'video' : 'img');
-        media.src = `${API_BASE}${item.url}`;
-        if (media.tagName === 'VIDEO') media.controls = true;
-        media.className = 'media';
-        card.appendChild(media);
-
-        const info = document.createElement('div'); info.className = 'info';
-        const closeBtn = document.createElement('button'); closeBtn.className = 'close-btn'; closeBtn.textContent = '×';
-        closeBtn.onclick = e => { e.stopPropagation(); card.classList.remove('active'); };
-        info.appendChild(closeBtn);
-        const fname = document.createElement('div'); fname.className = 'filename'; fname.contentEditable = true; fname.textContent = item.key;
-        fname.onblur = async () => {
-          const newName = fname.textContent.trim();
-          if (newName && newName !== item.key) {
-            await fetch(`${API_BASE}/api/rename?old=${encodeURIComponent(item.key)}&new=${encodeURIComponent(newName)}`, { method: 'POST' });
-            loadGallery(); showToast('Renamed file');
-          }
-        };
-        info.appendChild(fname);
-        const btnRow = document.createElement('div'); btnRow.className = 'btn-row';
-        const removeBtn = document.createElement('button'); removeBtn.className = 'remove-btn'; removeBtn.textContent = 'Remove';
-        removeBtn.onclick = async e => {
-          e.stopPropagation();
-          if (confirm(`Remove ${item.key}?`)) {
-            await fetch(`${API_BASE}/api/delete?group=root&filename=${encodeURIComponent(item.key)}`, { method: 'DELETE' });
-            loadGallery(); showToast('Removed file');
-          }
-        };
-        const shareBtn = document.createElement('button'); shareBtn.className = 'share-btn'; shareBtn.textContent = 'Share';
-        shareBtn.onclick = e => {
-          e.stopPropagation();
-          currentUrl = `${API_BASE}${item.url}`; showShareModal();
-        };
-        btnRow.appendChild(removeBtn); btnRow.appendChild(shareBtn);
-        info.appendChild(btnRow);
-        card.appendChild(info); container.appendChild(card);
-      });
-    }
-
-    function showShareModal() {
-      const modal = document.getElementById('shareModal');
-      const links = document.getElementById('shareLinks');
-      links.innerHTML = '';
-      const url = encodeURIComponent(currentUrl);
-      const text = encodeURIComponent('Check this out!');
-      const platforms = [
-        { name: 'Email', href: `mailto:?subject=${text}&body=${url}` },
-        { name: 'SMS', href: `sms:?body=${url}` },
-        { name: 'Twitter', href: `https://twitter.com/intent/tweet?url=${url}&text=${text}`, target: '_blank' },
-        { name: 'Facebook', href: `https://www.facebook.com/sharer/sharer.php?u=${url}`, target: '_blank' },
-        { name: 'WhatsApp', href: `https://wa.me/?text=${url}`, target: '_blank' },
-        { name: 'LinkedIn', href: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`, target: '_blank' }
-      ];
-      platforms.forEach(p => {
-        const a = document.createElement('a'); a.textContent = p.name; a.href = p.href; if (p.target) a.target = p.target; links.appendChild(a);
-      });
-      document.getElementById('copyLinkBtn').onclick = () => {
-        navigator.clipboard.writeText(currentUrl).then(() => showToast('Link copied to clipboard!'));
-      };
-      modal.classList.add('active');
-    }
-
-    document.getElementById('openUpload').onclick = () => document.getElementById('uploadModal').classList.add('active');
-    document.getElementById('closeModal').onclick = () => {
-      document.getElementById('uploadModal').classList.remove('active');
-      filesToUpload = []; document.getElementById('previewGrid').innerHTML = '';
-      document.getElementById('dropzone').textContent = 'Drag & drop files here or click to select';
+    // Upload modal auth check
+    document.getElementById('openUpload').onclick = async () => {
+      try { const res = await fetch('/cdn-cgi/access/get-identity'); if(!res.ok) throw 0; document.getElementById('uploadModal').classList.add('active'); }
+      catch { window.location.href='/cdn-cgi/access/login'; }
     };
+
+    document.getElementById('closeModal').onclick = () => { document.getElementById('uploadModal').classList.remove('active'); filesToUpload=[]; document.getElementById('previewGrid').innerHTML=''; };
     document.getElementById('dropzone').onclick = () => document.getElementById('fileInput').click();
+    document.getElementById('fileInput').onchange = e => { filesToUpload = Array.from(e.target.files); renderPreviewGrid(); };
     document.getElementById('dropzone').ondragover = e => { e.preventDefault(); e.currentTarget.classList.add('hover'); };
     document.getElementById('dropzone').ondragleave = e => e.currentTarget.classList.remove('hover');
-    document.getElementById('dropzone').ondrop = e => { e.preventDefault(); e.currentTarget.classList.remove('hover'); filesToUpload = Array.from(e.dataTransfer.files); renderPreviewGrid(); };
-    document.getElementById('fileInput').onchange = e => { filesToUpload = Array.from(e.target.files); renderPreviewGrid(); };
+    document.getElementById('dropzone').ondrop = e => { e.preventDefault(); e.currentTarget.classList.remove('hover'); filesToUpload=Array.from(e.dataTransfer.files); renderPreviewGrid(); };
+    document.getElementById('applyGroup').onclick = applyGroup;
+
     document.getElementById('uploadBtn').onclick = async () => {
-      if (!filesToUpload.length) return;
-      const btn = document.getElementById('uploadBtn'); btn.disabled = true; btn.textContent = 'Uploading...';
-      for (const file of filesToUpload) {
-        const url = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
-        await fetch(url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+      if(!filesToUpload.length) return;
+      const btn = document.getElementById('uploadBtn'); btn.disabled=true; btn.textContent='Uploading...';
+      for(const f of filesToUpload) {
+        const url = `${API_BASE}/api/upload?group=${encodeURIComponent(currentGroup)}&filename=${encodeURIComponent(f.name)}`;
+        await fetch(url,{method:'PUT',headers:{'Content-Type':f.type},body:f});
       }
-      btn.disabled = false; btn.textContent = 'Upload'; document.getElementById('closeModal').click(); loadGallery(); showToast('Upload complete!');
+      btn.disabled=false; btn.textContent='Upload'; document.getElementById('closeModal').click(); loadGallery(); showToast('Upload complete!');
     };
-    window.addEventListener('DOMContentLoaded', loadGallery);
+
+    async function loadGallery() {
+      const res = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(currentGroup)}`);
+      const items = await res.json(); const c = document.getElementById('gallery'); c.innerHTML='';
+      items.reverse().forEach(item => {
+        const card = document.createElement('div'); card.className='card'; card.onclick=()=>card.classList.toggle('active');
+        const isVid = item.key.match(/\.(mp4|mov|webm)$/i);
+        const m = document.createElement(isVid?'video':'img'); m.src=`${API_BASE}${item.url}`; if(isVid) m.controls=true; m.className='media'; card.appendChild(m);
+        const info = document.createElement('div'); info.className='info';
+        const closeBtn = document.createElement('button'); closeBtn.className='close-btn'; closeBtn.textContent='×'; closeBtn.onclick=e=>{e.stopPropagation();card.classList.remove('active');}; info.appendChild(closeBtn);
+        const fname = document.createElement('div'); fname.className='filename'; fname.contentEditable=true; fname.textContent=item.key; fname.onblur=async()=>{const newN=fname.textContent.trim();if(newN&&newN!==item.key){await fetch(`${API_BASE}/api/rename?group=${encodeURIComponent(currentGroup)}&old=${encodeURIComponent(item.key)}&new=${encodeURIComponent(newN)}`,{method:'POST'});loadGallery();showToast('Renamed');}}; info.appendChild(fname);
+        const btnRow=document.createElement('div'); btnRow.className='btn-row';
+        const remBtn=document.createElement('button'); remBtn.className='remove-btn'; remBtn.textContent='Remove'; remBtn.onclick=async e=>{e.stopPropagation();if(confirm(`Remove ${item.key}?`)){await fetch(`${API_BASE}/api/delete?group=${encodeURIComponent(currentGroup)}&filename=${encodeURIComponent(item.key)}`,{method:'DELETE'});loadGallery();showToast('Removed');}}; btnRow.appendChild(remBtn);
+        const shareBtn=document.createElement('button'); shareBtn.className='share-btn'; shareBtn.textContent='Share'; shareBtn.onclick=e=>{e.stopPropagation();currentUrl=`${API_BASE}${item.url}`; const runLinks=document.getElementById('shareLinks');runLinks.innerHTML='';['Email','SMS','Twitter','Facebook','WhatsApp','LinkedIn'].forEach(p=>{});showShare();}; btnRow.appendChild(shareBtn);
+        info.appendChild(btnRow); card.appendChild(info); c.appendChild(card);
+      });
+    }
+
+    function showShare(){const modal=document.getElementById('shareModal'),links=document.getElementById('shareLinks');links.innerHTML='';const url=encodeURIComponent(currentUrl),text=encodeURIComponent('Check this');const platforms=[{n:'Email',h:`mailto:?subject=${text}&body=${url}`},{n:'SMS',h:`sms:?body=${url}`},{n:'Twitter',h:`https://twitter.com/intent/tweet?url=${url}&text=${text}`,t:'_blank'},{n:'Facebook',h:`https://www.facebook.com/sharer/sharer.php?u=${url}`,t:'_blank'},{n:'WhatsApp',h:`https://wa.me/?text=${url}`,t:'_blank'},{n:'LinkedIn',h:`https://www.linkedin.com/sharing/share-offsite/?url=${url}`,t:'_blank'}];platforms.forEach(p=>{const a=document.createElement('a');a.textContent=p.n;a.href=p.h;if(p.t)a.target=p.t;links.appendChild(a);});
+      document.getElementById('copyLinkBtn').onclick=() => {navigator.clipboard.writeText(currentUrl).then(()=>showToast('Copied'));};modal.classList.add('active');
+    }
+
+    window.addEventListener('DOMContentLoaded',async()=>{await loadGroupsList();applyGroup();});
   </script>
 </body>
 </html>
