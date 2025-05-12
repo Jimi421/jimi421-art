@@ -1,6 +1,6 @@
 /* styles.css */
 
-/* Global resets & typography */
+/* Reset & base */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -52,7 +52,7 @@ h1 {
   padding: 1rem;
 }
 
-/* Card container enforces square thumbnails */
+/* Make every card a perfect square thumbnail */
 .card {
   background: #fff;
   border-radius: 8px;
@@ -67,12 +67,14 @@ h1 {
   transform: scale(1.03);
 }
 
-/* Thumbnail media */
-.media {
+/* Fit whole image/video inside the square, with letterboxing */
+.card img,
+.card video {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
+  background: #fff;
 }
 
 /* Floating upload button */
@@ -95,7 +97,7 @@ h1 {
   background: #27ae60;
 }
 
-/* Modals */
+/* Modals (upload, share, image enlarge) */
 .modal {
   display: none;
   position: fixed;
@@ -193,12 +195,6 @@ h1 {
   padding: 2px 4px;
   cursor: pointer;
 }
-.rotate-btn {
-  bottom: 2px;
-  left: 2px;
-  top: auto;
-  right: auto;
-}
 
 /* Toast notification */
 #toast {
@@ -236,3 +232,4 @@ h1 {
   border: none;
   cursor: pointer;
 }
+
