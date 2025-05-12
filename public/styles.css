@@ -60,10 +60,6 @@ h1 {
   height: auto;
   max-height: 300px;
   object-fit: contain;
-  display: block;
-  margin: 0 auto;
-  background: #fff;
-  border-radius: 6px;
 }
 
 /* Upload Button (Floating) */
