@@ -49,21 +49,21 @@ h1 {
 
 /* Card and Media Display */
 .card {
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  cursor: pointer;
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
 }
 
 .media {
   width: 100%;
-  height: 200px;
+  height: auto;
+  max-height: 300px;
+  object-fit: contain;
   display: block;
-  border-radius: 6px;
-  object-fit: cover;
+  margin: 0 auto;
   background: #fff;
+  border-radius: 6px;
 }
 
 /* Upload Button (Floating) */
