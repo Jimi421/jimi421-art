@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jimi421 Art Gallery</title>
-  <link rel="stylesheet" href="/styles.css" />
   <style>
     body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f7f7f7; color: #222; }
     h1 { text-align: center; padding: 1rem 0; font-size: 2rem; color: #444; }
@@ -29,6 +28,22 @@
     .preview button { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 4px; font-size: 12px; padding: 2px 4px; cursor: pointer; }
     #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 3000; }
     #toast.show { opacity: 1; }
+
+    /* Image Modal */
+    #imageModal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.9); z-index: 3000;
+      justify-content: center; align-items: center;
+    }
+    #imageModal img {
+      max-width: 90vw; max-height: 90vh;
+      border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+    #imageModal button {
+      position: absolute; top: 20px; right: 20px;
+      font-size: 2rem; background: none; color: #fff;
+      border: none; cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -46,6 +61,12 @@
       <button id="uploadBtn" class="btn upload">Upload</button>
       <button id="closeModal" class="btn close">Cancel</button>
     </div>
+  </div>
+
+  <!-- Modal for Enlarged Image -->
+  <div id="imageModal">
+    <img id="modalImage" />
+    <button onclick="closeModal()">×</button>
   </div>
 
   <div id="toast"></div>
@@ -84,12 +105,19 @@
         media.src = `${API_BASE}${item.url}`;
         if (media.tagName === 'VIDEO') media.controls = true;
         media.className = 'media';
+        media.onclick = () => showModal(media.src);  // ← Enlarge on click
         card.appendChild(media);
-        card.onclick = () => {
-          window.location.href = `/photo.html?group=${group}&filename=${encodeURIComponent(item.key)}`;
-        };
         container.appendChild(card);
       });
+    }
+
+    function showModal(src) {
+      document.getElementById('modalImage').src = src;
+      document.getElementById('imageModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('imageModal').style.display = 'none';
     }
 
     document.getElementById('openUpload').onclick = () => document.getElementById('uploadModal').classList.add('active');
@@ -176,4 +204,4 @@
     });
   </script>
 </body>
-</html
+</html>
