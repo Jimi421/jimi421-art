@@ -4,176 +4,59 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jimi421 Art Gallery</title>
-  <link rel="stylesheet" href="/styles.css" />
   <style>
     body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f7f7f7; color: #222; }
     h1 { text-align: center; padding: 1rem 0; font-size: 2rem; color: #444; }
-    #groupButtons { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; padding: 1rem; }
-    .group-btn { padding: 0.5rem 1rem; border: none; background: #3498db; color: #fff; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    #gallery { display: grid; grid-template-columns: 1fr; gap: 1rem; padding: 1rem; }
-    @media(min-width:600px) { #gallery { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
-    .card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; position: relative; }
-    .media { width: 100%; height: 200px; object-fit: cover; }
-    #openUpload { position: fixed; bottom: 20px; right: 20px; background: #2ecc71; color: #fff; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 2rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-    #uploadModal, #shareModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
-    #uploadModal.active, #shareModal.active { display: flex; }
-    .modal-content { background: #fff; border-radius: 8px; padding: 1.5rem; width: 90%; max-width: 500px; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
-    .dropzone { border: 2px dashed #bbb; border-radius: 8px; padding: 2rem; text-align: center; color: #888; margin-bottom: 1rem; cursor: pointer; }
-    .dropzone.hover { border-color: #2ecc71; color: #2ecc71; }
-    .btn { display: block; width: 100%; padding: 0.6rem; font-size: 1rem; border-radius: 4px; border: none; cursor: pointer; margin-top: 0.5rem; }
-    .btn.upload { background: #2ecc71; color: #fff; }
-    .btn.close { background: #e74c3c; color: #fff; }
-    #previewGrid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 1rem; }
-    .preview { position: relative; width: 80px; height: 80px; border: 1px solid #ccc; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-    .preview img { max-width: 100%; max-height: 100%; }
-    .preview button { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 4px; font-size: 12px; padding: 2px 4px; cursor: pointer; }
-    #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: #fff; padding: 0.5rem 1rem; border-radius: 4px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 3000; }
-    #toast.show { opacity: 1; }
+    #gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; padding: 1rem; }
+    .card { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .card img, .card video { width: 100%; height: auto; display: block; border-bottom: 1px solid #eee; }
+    .card .filename { padding: 0.5rem; font-size: 0.85rem; text-align: center; word-break: break-all; }
   </style>
 </head>
 <body>
   <h1>Jimi421 Art Gallery</h1>
-  <div id="groupButtons"></div>
   <div id="gallery"></div>
-  <button id="openUpload">+</button>
-
-  <div id="uploadModal">
-    <div class="modal-content">
-      <h2>Upload Files</h2>
-      <div id="dropzone" class="dropzone">Drag & drop files here or click to select</div>
-      <input type="file" id="fileInput" multiple accept="image/*">
-      <div id="previewGrid"></div>
-      <button id="uploadBtn" class="btn upload">Upload</button>
-      <button id="closeModal" class="btn close">Cancel</button>
-    </div>
-  </div>
-
-  <div id="toast"></div>
 
   <script>
     const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
-    let filesToUpload = [], currentGroup = 'root';
 
-    async function loadGroups() {
-      const res = await fetch(`${API_BASE}/api/groups`);
-      const groups = await res.json();
-      const container = document.getElementById('groupButtons');
-      container.innerHTML = '';
-      groups.forEach(group => {
-        const btn = document.createElement('button');
-        btn.className = 'group-btn';
-        btn.textContent = group;
-        btn.onclick = () => {
-          currentGroup = group;
-          loadGallery(group);
-        };
-        container.appendChild(btn);
-      });
-    }
+    async function loadGallery() {
+      try {
+        const res = await fetch(`${API_BASE}/api/gallery`);
+        const items = await res.json();
+        const container = document.getElementById('gallery');
+        container.innerHTML = '';
 
-    async function loadGallery(group = 'root') {
-      const res = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
-      const items = await res.json();
-      const container = document.getElementById('gallery');
-      container.innerHTML = '';
-      items.reverse().forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
-        const media = document.createElement(isVideo ? 'video' : 'img');
-        media.src = `${API_BASE}${item.url}`;
-        if (media.tagName === 'VIDEO') media.controls = true;
-        media.className = 'media';
-        card.appendChild(media);
-        card.onclick = () => {
-          window.location.href = `/photo.html?group=${group}&filename=${encodeURIComponent(item.key)}`;
-        };
-        container.appendChild(card);
-      });
-    }
+        items.reverse().forEach(item => {
+          const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
+          const card = document.createElement('div');
+          card.className = 'card';
 
-    document.getElementById('openUpload').onclick = () => document.getElementById('uploadModal').classList.add('active');
-    document.getElementById('closeModal').onclick = () => {
-      document.getElementById('uploadModal').classList.remove('active');
-      filesToUpload = []; document.getElementById('previewGrid').innerHTML = '';
-      document.getElementById('dropzone').textContent = 'Drag & drop files here or click to select';
-    };
-    document.getElementById('dropzone').onclick = () => document.getElementById('fileInput').click();
-    document.getElementById('dropzone').ondragover = e => { e.preventDefault(); e.currentTarget.classList.add('hover'); };
-    document.getElementById('dropzone').ondragleave = e => e.currentTarget.classList.remove('hover');
-    document.getElementById('dropzone').ondrop = e => { e.preventDefault(); e.currentTarget.classList.remove('hover'); filesToUpload = Array.from(e.dataTransfer.files); renderPreviewGrid(); };
-    document.getElementById('fileInput').onchange = e => { filesToUpload = Array.from(e.target.files); renderPreviewGrid(); };
-    document.getElementById('uploadBtn').onclick = async () => {
-      if (!filesToUpload.length) return;
-      const btn = document.getElementById('uploadBtn'); btn.disabled = true; btn.textContent = 'Uploading...';
-      for (const file of filesToUpload) {
-        const url = `${API_BASE}/api/upload?group=${encodeURIComponent(currentGroup)}&filename=${encodeURIComponent(file.name)}`;
-        await fetch(url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+          let media;
+          if (isVideo) {
+            media = document.createElement('video');
+            media.src = `${API_BASE}${item.url}`;
+            media.controls = true;
+          } else {
+            media = document.createElement('img');
+            media.src = `${API_BASE}${item.url}`;
+            media.alt = item.key;
+          }
+
+          const caption = document.createElement('div');
+          caption.className = 'filename';
+          caption.textContent = item.key;
+
+          card.appendChild(media);
+          card.appendChild(caption);
+          container.appendChild(card);
+        });
+      } catch (err) {
+        console.error('Failed to load gallery:', err);
       }
-      btn.disabled = false; btn.textContent = 'Upload'; document.getElementById('closeModal').click(); loadGallery(currentGroup); showToast('Upload complete!');
-    };
-
-    function renderPreviewGrid() {
-      const previewGrid = document.getElementById('previewGrid');
-      previewGrid.innerHTML = '';
-      filesToUpload.forEach((file, index) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const div = document.createElement('div');
-          div.className = 'preview';
-          const img = document.createElement('img');
-          img.src = reader.result;
-          div.appendChild(img);
-
-          const removeBtn = document.createElement('button');
-          removeBtn.textContent = '✕';
-          removeBtn.onclick = () => {
-            filesToUpload.splice(index, 1);
-            renderPreviewGrid();
-            showToast('Removed from preview');
-          };
-          div.appendChild(removeBtn);
-
-          const rotateBtn = document.createElement('button');
-          rotateBtn.textContent = '⟳';
-          rotateBtn.className = 'rotate-btn';
-          rotateBtn.onclick = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const image = new Image();
-            image.onload = () => {
-              canvas.width = image.height;
-              canvas.height = image.width;
-              ctx.translate(canvas.width/2, canvas.height/2);
-              ctx.rotate(90 * Math.PI / 180);
-              ctx.drawImage(image, -image.width/2, -image.height/2);
-              canvas.toBlob(blob => {
-                filesToUpload[index] = new File([blob], file.name, { type: file.type });
-                renderPreviewGrid();
-                showToast('Rotated preview');
-              }, file.type);
-            };
-            image.src = reader.result;
-          };
-          div.appendChild(rotateBtn);
-
-          previewGrid.appendChild(div);
-        };
-        reader.readAsDataURL(file);
-      });
     }
 
-    function showToast(msg) {
-      const toast = document.getElementById('toast');
-      toast.textContent = msg;
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 3000);
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      loadGroups();
-      loadGallery();
-    });
+    window.addEventListener('DOMContentLoaded', loadGallery);
   </script>
 </body>
-</htm
+</html>
