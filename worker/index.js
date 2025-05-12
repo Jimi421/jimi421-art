@@ -9,85 +9,87 @@ const corsHeaders = {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const { pathname, searchParams } = url;
+    const method = request.method;
 
-    // CORS
-    if (request.method === 'OPTIONS') {
+    // 1. CORS preflight
+    if (method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    // Upload handler with group support
-    if (request.method === 'PUT' && url.pathname === '/api/upload') {
-      const filename = url.searchParams.get('filename');
-      const group = url.searchParams.get('group') || 'root';
+    // 2. PUT /api/upload?group=…&filename=…
+    if (method === 'PUT' && pathname === '/api/upload') {
+      const group    = searchParams.get('group')    || 'root';
+      const filename = searchParams.get('filename');
       if (!filename) {
-        return new Response('Missing filename', { status: 400, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
+        return new Response('Missing filename', { status: 400, headers: corsHeaders });
       }
-      const key = `${group}/${filename}`;
-      console.log(`🔼 Uploading: ${key}`);
+      const key = group === 'root' ? filename : `${group}/${filename}`;
       await env.ART_BUCKET.put(key, request.body, {
-        httpMetadata: {
-          contentType: request.headers.get('Content-Type') || 'application/octet-stream'
-        }
+        httpMetadata: { contentType: request.headers.get('Content-Type') || 'application/octet-stream' }
       });
+      // Optionally track in KV
+      const current = JSON.parse(await env.GALLERY_KV.get('items') || '[]');
+      if (!current.includes(key)) {
+        current.push(key);
+        await env.GALLERY_KV.put('items', JSON.stringify(current));
+      }
       return new Response('Uploaded', { status: 200, headers: corsHeaders });
     }
 
-    // Gallery list by group
-    if (request.method === 'GET' && url.pathname === '/api/gallery') {
-      const group = url.searchParams.get('group') || 'root';
-      const list = await env.ART_BUCKET.list({ prefix: `${group}/` });
-      const items = list.objects.map(obj => ({
-        key: obj.key.split('/')[1],
-        url: `/api/image?filename=${encodeURIComponent(obj.key)}`
-      }));
-      return new Response(JSON.stringify(items), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
-    }
-
-    // List all groups (from R2 object prefixes)
-    if (request.method === 'GET' && url.pathname === '/api/groups') {
+    // 3. GET /api/groups
+    if (method === 'GET' && pathname === '/api/groups') {
       const list = await env.ART_BUCKET.list();
+      // extract first path segment as group, default to 'root'
       const groups = new Set();
       for (const obj of list.objects) {
-        const prefix = obj.key.split('/')[0];
-        if (prefix) groups.add(prefix);
+        const parts = obj.key.split('/');
+        groups.add(parts.length > 1 ? parts[0] : 'root');
       }
-      return new Response(JSON.stringify([...groups]), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
+      return new Response(
+        JSON.stringify(Array.from(groups)),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
     }
 
-    // Serve image
-    if (request.method === 'GET' && url.pathname === '/api/image') {
-      const filename = url.searchParams.get('filename');
+    // 4. GET /api/gallery?group=…
+    if (method === 'GET' && pathname === '/api/gallery') {
+      const group  = searchParams.get('group') || 'root';
+      const prefix = group === 'root' ? '' : `${group}/`;
+      const list   = await env.ART_BUCKET.list({ prefix });
+      const items  = list.objects.map(obj => {
+        // strip prefix from key for client display
+        const key = prefix ? obj.key.slice(prefix.length) : obj.key;
+        return {
+          group,
+          key,
+          url: `/api/image?filename=${encodeURIComponent(obj.key)}`
+        };
+      });
+      return new Response(
+        JSON.stringify(items),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // 5. GET /api/image?filename=…
+    if (method === 'GET' && pathname === '/api/image') {
+      const filename = searchParams.get('filename');
       if (!filename) {
-        return new Response('Missing filename', { status: 400, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
+        return new Response('Missing filename', { status: 400, headers: corsHeaders });
       }
       const object = await env.ART_BUCKET.get(filename);
       if (!object) {
-        return new Response('Not found', { status: 404, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
+        return new Response('Not found', { status: 404, headers: corsHeaders });
       }
-      const contentType = object.httpMetadata?.contentType || 'image/jpeg';
+      const contentType = object.httpMetadata?.contentType || 'application/octet-stream';
       return new Response(object.body, {
         status: 200,
         headers: { 'Content-Type': contentType, ...corsHeaders }
       });
     }
 
-    // Debug
-    if (request.method === 'GET' && url.pathname === '/api/debug') {
-      const list = await env.ART_BUCKET.list();
-      const keys = list.objects.map(o => o.key);
-      return new Response(JSON.stringify({ keys }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders }
-      });
-    }
-
-    // Fallback
+    // 6. Fallback
     return new Response('Not Found', { status: 404, headers: corsHeaders });
   }
 };
