@@ -1,114 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gallery Group View</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Art Viewer</title>
+  <link rel="stylesheet" href="/photo.css">
   <style>
-    body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f9f9f9; color: #222; }
-    h1 { text-align: center; padding: 1rem; font-size: 1.8rem; color: #333; }
-    #backBtn { margin: 1rem; font-size: 1rem; padding: 0.5rem 1rem; background: #ccc; border: none; border-radius: 6px; cursor: pointer; }
-    #gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; padding: 1rem; }
-    .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); overflow: hidden; cursor: pointer; }
-    .card img { width: 100%; height: 160px; object-fit: cover; }
-    #openUpload { position: fixed; bottom: 20px; right: 20px; background: #2ecc71; color: #fff; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 2rem; cursor: pointer; }
-
-    /* Upload Modal */
-    #uploadModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
-    #uploadModal.active { display: flex; }
-    .modal-content { background: #fff; padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%; text-align: center; }
-    .dropzone { border: 2px dashed #ccc; padding: 2rem; border-radius: 8px; margin-bottom: 1rem; cursor: pointer; color: #888; }
-    .dropzone.hover { border-color: #2ecc71; color: #2ecc71; }
-    #fileInput { display: none; }
-    .btn { display: block; width: 100%; padding: 0.6rem; font-size: 1rem; border-radius: 4px; margin-top: 0.5rem; border: none; cursor: pointer; }
-    .btn.upload { background: #2ecc71; color: #fff; }
-    .btn.close { background: #e74c3c; color: #fff; }
-    .preview { display: inline-block; margin: 0.5rem; position: relative; }
-    .preview img { max-width: 100px; max-height: 100px; border-radius: 4px; }
-    .preview button { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.5); border: none; color: #fff; font-size: 0.8rem; border-radius: 3px; cursor: pointer; padding: 2px 5px; }
+    body {
+      margin: 0; font-family: 'Segoe UI', sans-serif;
+      background: #fff; color: #333;
+    }
+    .breadcrumb {
+      padding: 1rem; background: #f1f1f1;
+      font-size: 0.9rem; color: #555;
+    }
+    .breadcrumb a {
+      text-decoration: none; color: #3498db;
+    }
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 2rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+    }
+    .main-image {
+      flex: 2 1 500px;
+      max-width: 100%;
+    }
+    .main-image img, .main-image video {
+      width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+    .meta {
+      flex: 1 1 300px;
+      background: #fafafa;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.05);
+    }
+    .meta h2 {
+      margin-top: 0;
+    }
+    .meta .tags {
+      margin-top: 1rem;
+    }
+    .meta .tags span {
+      display: inline-block;
+      background: #eee;
+      padding: 0.3rem 0.6rem;
+      margin: 0.2rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
   </style>
 </head>
 <body>
-  <h1 id="groupTitle">Loading...</h1>
-  <button id="backBtn" onclick="history.back()">← Back</button>
-  <div id="gallery"></div>
-  <button id="openUpload">+</button>
+  <nav class="breadcrumb">
+    <a href="/">Home</a> / 
+    <a href="/gallery/trees">Trees</a> / 
+    Red Maple 01
+  </nav>
 
-  <div id="uploadModal">
-    <div class="modal-content">
-      <h2>Upload to Group</h2>
-      <div id="dropzone" class="dropzone">Drag & drop files here or click</div>
-      <input type="file" id="fileInput" multiple accept="image/*">
-      <div id="previewArea"></div>
-      <button class="btn upload" id="uploadBtn">Upload</button>
-      <button class="btn close" id="closeModal">Cancel</button>
+  <div class="container">
+    <div class="main-image">
+      <!-- Conditionally render image or video -->
+      <img src="https://jimi421-art.jimi421.workers.dev/api/image?filename=red-maple-01.jpg" alt="Red Maple 01">
     </div>
+
+    <aside class="meta">
+      <h2>Red Maple 01</h2>
+      <p><strong>Group:</strong> Trees</p>
+      <p><strong>Uploaded:</strong> May 12, 2025</p>
+      <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. This is a sample caption or description of the artwork.</p>
+      <div class="tags">
+        <span>#nature</span>
+        <span>#trees</span>
+        <span>#fall</span>
+      </div>
+    </aside>
   </div>
-
-  <script>
-    const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
-    const group = new URLSearchParams(window.location.search).get('group') || 'root';
-    let filesToUpload = [];
-
-    document.getElementById('groupTitle').textContent = group.charAt(0).toUpperCase() + group.slice(1);
-
-    async function loadImages() {
-      const res = await fetch(`${API_BASE}/api/gallery?group=${group}`);
-      const images = await res.json();
-      const container = document.getElementById('gallery');
-      container.innerHTML = '';
-      images.forEach(img => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        const image = document.createElement('img');
-        image.src = `${API_BASE}${img.url}`;
-        card.appendChild(image);
-        container.appendChild(card);
-      });
-    }
-
-    function renderPreview() {
-      const area = document.getElementById('previewArea');
-      area.innerHTML = '';
-      filesToUpload.forEach((file, i) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const div = document.createElement('div');
-          div.className = 'preview';
-          const img = document.createElement('img');
-          img.src = reader.result;
-          div.appendChild(img);
-          const removeBtn = document.createElement('button');
-          removeBtn.textContent = '✕';
-          removeBtn.onclick = () => {
-            filesToUpload.splice(i, 1);
-            renderPreview();
-          };
-          div.appendChild(removeBtn);
-          area.appendChild(div);
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    document.getElementById('openUpload').onclick = () => document.getElementById('uploadModal').classList.add('active');
-    document.getElementById('closeModal').onclick = () => {
-      document.getElementById('uploadModal').classList.remove('active');
-      filesToUpload = [];
-      document.getElementById('previewArea').innerHTML = '';
-    };
-    document.getElementById('dropzone').onclick = () => document.getElementById('fileInput').click();
-    document.getElementById('fileInput').onchange = e => { filesToUpload = Array.from(e.target.files); renderPreview(); };
-    document.getElementById('uploadBtn').onclick = async () => {
-      for (const file of filesToUpload) {
-        const url = `${API_BASE}/api/upload?group=${group}&filename=${encodeURIComponent(file.name)}`;
-        await fetch(url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
-      }
-      document.getElementById('closeModal').click();
-      loadImages();
-    };
-
-    loadImages();
-  </script>
 </body>
 </html>
