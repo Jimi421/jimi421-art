@@ -1,62 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gallery View</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gallery</title>
   <style>
-    body { margin: 0; font-family: sans-serif; background: #f4f4f4; color: #222; }
-    h1 { text-align: center; padding: 1rem; font-size: 2rem; }
-    #groups { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; padding: 1rem; }
-    .group { padding: 0.5rem 1rem; border-radius: 4px; background: #3498db; color: white; cursor: pointer; }
-    #gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; padding: 1rem; }
-    .card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s ease; }
-    .card:hover { transform: scale(1.02); }
-    .media { width: 100%; height: 200px; object-fit: cover; display: block; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f9f9f9;
+      padding: 2rem;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 2rem;
+      color: #333;
+    }
+    #gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+    }
+    .thumb {
+      display: block;
+      border-radius: 8px;
+      overflow: hidden;
+      text-decoration: none;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease;
+    }
+    .thumb:hover {
+      transform: scale(1.03);
+    }
+    .thumb img, .thumb video {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      display: block;
+    }
+    .filename {
+      padding: 0.5rem;
+      font-size: 0.9rem;
+      color: #333;
+      text-align: center;
+      word-break: break-word;
+    }
   </style>
 </head>
 <body>
-  <h1>Gallery</h1>
-  <div id="groups"></div>
+  <h1>Jimi421 Art Gallery</h1>
   <div id="gallery"></div>
 
   <script>
     const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
+    const container = document.getElementById('gallery');
 
-    async function loadGroups() {
-      const res = await fetch(`${API_BASE}/api/groups`);
-      const groups = await res.json();
-      const container = document.getElementById('groups');
-      groups.forEach(group => {
-        const btn = document.createElement('div');
-        btn.className = 'group';
-        btn.textContent = group;
-        btn.onclick = () => loadGallery(group);
-        container.appendChild(btn);
-      });
-    }
-
-    async function loadGallery(group) {
-      const res = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
+    async function loadGallery() {
+      const res = await fetch(`${API_BASE}/api/gallery`);
       const items = await res.json();
-      const container = document.getElementById('gallery');
-      container.innerHTML = '';
-      items.forEach(item => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.onclick = () => window.location.href = `photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(item.key)}`;
-
+      items.reverse().forEach(item => {
         const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
+        const el = document.createElement('a');
+        el.className = 'thumb';
+        el.href = `photo.html?group=${encodeURIComponent(item.group)}&file=${encodeURIComponent(item.key)}`;
+
         const media = document.createElement(isVideo ? 'video' : 'img');
         media.src = `${API_BASE}${item.url}`;
-        if (media.tagName === 'VIDEO') media.controls = true;
-        media.className = 'media';
-        card.appendChild(media);
-        container.appendChild(card);
+        if (isVideo) media.muted = true;
+        el.appendChild(media);
+
+        const caption = document.createElement('div');
+        caption.className = 'filename';
+        caption.textContent = item.key;
+        el.appendChild(caption);
+
+        container.appendChild(el);
       });
     }
 
-    loadGroups();
+    window.addEventListener('DOMContentLoaded', loadGallery);
   </script>
 </body>
 </html>
