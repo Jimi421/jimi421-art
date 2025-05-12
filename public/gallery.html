@@ -3,71 +3,79 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jimi421 Art Gallery</title>
+  <title>Jimi421 Gallery v2</title>
   <style>
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background: #f8f9fa;
-      color: #333;
+      background: #f3f4f6;
+      color: #111;
     }
-
-    h1 {
-      text-align: center;
+    header {
       padding: 1rem;
-      font-size: 2rem;
-    }
-
-    .group {
-      margin: 2rem 1rem;
-    }
-
-    .group h2 {
-      margin: 0 0 1rem;
-      font-size: 1.5rem;
-      border-bottom: 1px solid #ccc;
-      padding-bottom: 0.5rem;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 1rem;
-      padding: 0 1rem;
-    }
-
-    .thumb {
-      display: block;
-      border-radius: 8px;
-      overflow: hidden;
-      text-decoration: none;
+      text-align: center;
       background: #fff;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      transition: transform 0.2s ease;
+      font-size: 1.8rem;
+      font-weight: 600;
     }
-
-    .thumb:hover {
+    #filters {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 1rem;
+    }
+    .filter-btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    #gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      padding: 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      overflow: hidden;
+      transition: transform 0.2s ease;
+      cursor: pointer;
+    }
+    .card:hover {
       transform: scale(1.03);
     }
-
-    .thumb img,
-    .thumb video {
+    .thumb {
       width: 100%;
-      height: 120px;
+      height: 160px;
       object-fit: cover;
       display: block;
     }
-
-    .label {
-      text-align: center;
-      font-size: 0.9rem;
+    .filename {
       padding: 0.5rem;
-      color: #555;
+      font-size: 0.85rem;
+      font-weight: 500;
+      text-align: center;
+    }
+    @media (max-width: 600px) {
+      .thumb {
+        height: 120px;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Jimi421 Art Gallery</h1>
+  <header>Jimi421 Art Gallery</header>
+  <div id="filters"></div>
   <div id="gallery"></div>
 
   <script>
@@ -76,48 +84,43 @@
     async function loadGallery() {
       const res = await fetch(`${API_BASE}/api/gallery`);
       const items = await res.json();
-      const container = document.getElementById('gallery');
+      const groups = [...new Set(items.map(item => item.group || 'root'))];
+      const filters = document.getElementById('filters');
+      filters.innerHTML = '';
 
-      const groups = {};
-      for (const item of items) {
-        const group = item.group || 'Uncategorized';
-        if (!groups[group]) groups[group] = [];
-        groups[group].push(item);
-      }
+      groups.forEach(group => {
+        const btn = document.createElement('button');
+        btn.className = 'filter-btn';
+        btn.textContent = group;
+        btn.onclick = () => renderGallery(items.filter(i => (i.group || 'root') === group));
+        filters.appendChild(btn);
+      });
 
-      for (const group in groups) {
-        const section = document.createElement('div');
-        section.className = 'group';
+      renderGallery(items);
+    }
 
-        const heading = document.createElement('h2');
-        heading.textContent = group;
-        section.appendChild(heading);
+    function renderGallery(items) {
+      const gallery = document.getElementById('gallery');
+      gallery.innerHTML = '';
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.onclick = () => window.location.href = `/photo.html?file=${encodeURIComponent(item.key)}&group=${encodeURIComponent(item.group || 'root')}`;
 
-        const grid = document.createElement('div');
-        grid.className = 'grid';
+        const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
+        const media = document.createElement(isVideo ? 'video' : 'img');
+        media.src = `${API_BASE}${item.url}`;
+        media.className = 'thumb';
+        if (isVideo) media.controls = true;
 
-        for (const item of groups[group]) {
-          const link = document.createElement('a');
-          link.href = `photo.html?group=${encodeURIComponent(group)}&file=${encodeURIComponent(item.key)}`;
-          link.className = 'thumb';
+        const label = document.createElement('div');
+        label.className = 'filename';
+        label.textContent = item.key;
 
-          const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
-          const media = document.createElement(isVideo ? 'video' : 'img');
-          media.src = `${API_BASE}${item.url}`;
-          if (isVideo) media.controls = false;
-          link.appendChild(media);
-
-          const label = document.createElement('div');
-          label.className = 'label';
-          label.textContent = item.key;
-          link.appendChild(label);
-
-          grid.appendChild(link);
-        }
-
-        section.appendChild(grid);
-        container.appendChild(section);
-      }
+        card.appendChild(media);
+        card.appendChild(label);
+        gallery.appendChild(card);
+      });
     }
 
     window.addEventListener('DOMContentLoaded', loadGallery);
