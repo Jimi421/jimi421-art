@@ -29,6 +29,20 @@ async function loadGroups() {
     };
     container.appendChild(btn);
   });
+
+  // Populate group dropdown in upload modal
+  const groupSelect = document.getElementById('groupSelect');
+  if (groupSelect) {
+    groupSelect.innerHTML = '<option value="root">root</option><option value="__new__">➕ New Group...</option>';
+    groups.forEach(group => {
+      if (group !== 'root') {
+        const option = document.createElement('option');
+        option.value = group;
+        option.textContent = group;
+        groupSelect.insertBefore(option, groupSelect.lastElementChild);
+      }
+    });
+  }
 }
 
 function setActiveGroup(activeBtn) {
@@ -56,13 +70,13 @@ async function loadGallery(group = 'all') {
     media.className = 'media';
     card.appendChild(media);
     card.onclick = () => {
-      window.location.href = `/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(item.key.split('/').pop())}`;
+      const filename = item.key.split('/').pop();
+      window.location.href = `/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
     };
     container.appendChild(card);
   });
 }
 
-// Upload UI bindings (same as before)
 document.getElementById('openUpload').onclick = () => document.getElementById('uploadModal').classList.add('active');
 document.getElementById('closeModal').onclick = () => {
   document.getElementById('uploadModal').classList.remove('active');
@@ -70,6 +84,7 @@ document.getElementById('closeModal').onclick = () => {
   document.getElementById('previewGrid').innerHTML = '';
   document.getElementById('dropzone').textContent = 'Drag & drop files here or click to select';
 };
+
 document.getElementById('dropzone').onclick = () => document.getElementById('fileInput').click();
 document.getElementById('dropzone').ondragover = e => { e.preventDefault(); e.currentTarget.classList.add('hover'); };
 document.getElementById('dropzone').ondragleave = e => e.currentTarget.classList.remove('hover');
@@ -83,25 +98,40 @@ document.getElementById('fileInput').onchange = e => {
   filesToUpload = Array.from(e.target.files);
   renderPreviewGrid();
 };
+
 document.getElementById('uploadBtn').onclick = async () => {
   if (!filesToUpload.length) return;
+
+  let selectedGroup = document.getElementById('groupSelect').value;
+  if (selectedGroup === '__new__') {
+    selectedGroup = document.getElementById('newGroupInput').value.trim();
+  }
+  if (!selectedGroup) selectedGroup = 'root';
+
   const btn = document.getElementById('uploadBtn');
   btn.disabled = true;
   btn.textContent = 'Uploading...';
+
   for (const file of filesToUpload) {
-    const url = `${API_BASE}/api/upload?group=${encodeURIComponent(currentGroup)}&filename=${encodeURIComponent(file.name)}`;
+    const url = `${API_BASE}/api/upload?group=${encodeURIComponent(selectedGroup)}&filename=${encodeURIComponent(file.name)}`;
     await fetch(url, {
       method: 'PUT',
       headers: { 'Content-Type': file.type },
       body: file
     });
   }
+
   btn.disabled = false;
   btn.textContent = 'Upload';
   document.getElementById('closeModal').click();
-  loadGallery(currentGroup);
+  loadGallery(selectedGroup);
   showToast('Upload complete!');
 };
+
+document.getElementById('groupSelect').addEventListener('change', e => {
+  const input = document.getElementById('newGroupInput');
+  input.style.display = e.target.value === '__new__' ? 'block' : 'none';
+});
 
 function renderPreviewGrid() {
   const previewGrid = document.getElementById('previewGrid');
