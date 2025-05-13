@@ -1,15 +1,52 @@
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
-let filesToUpload = [], currentGroup = 'root';
+let filesToUpload = [], currentGroup = 'all';
 
-// Removed loadGroups()
+async function loadGroups() {
+  const res = await fetch(`${API_BASE}/api/groups`);
+  const groups = await res.json();
 
-async function loadGallery(group = 'root') {
+  const container = document.getElementById('groupButtons');
+  container.innerHTML = '';
+
+  const allBtn = document.createElement('button');
+  allBtn.className = 'group-btn active';
+  allBtn.textContent = 'All';
+  allBtn.onclick = () => {
+    currentGroup = 'all';
+    setActiveGroup(allBtn);
+    loadGallery();
+  };
+  container.appendChild(allBtn);
+
+  groups.sort().forEach(group => {
+    const btn = document.createElement('button');
+    btn.className = 'group-btn';
+    btn.textContent = group;
+    btn.onclick = () => {
+      currentGroup = group;
+      setActiveGroup(btn);
+      loadGallery(group);
+    };
+    container.appendChild(btn);
+  });
+}
+
+function setActiveGroup(activeBtn) {
+  document.querySelectorAll('.group-btn').forEach(btn => btn.classList.remove('active'));
+  activeBtn.classList.add('active');
+}
+
+async function loadGallery(group = 'all') {
   const res = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
   const items = await res.json();
   const container = document.getElementById('gallery');
   container.innerHTML = '';
 
-  items.reverse().forEach(item => {
+  const filtered = group === 'all'
+    ? items
+    : items.filter(item => item.key.startsWith(`${group}/`));
+
+  filtered.reverse().forEach(item => {
     const card = document.createElement('div');
     card.className = 'card';
     const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
@@ -19,12 +56,13 @@ async function loadGallery(group = 'root') {
     media.className = 'media';
     card.appendChild(media);
     card.onclick = () => {
-      window.location.href = `/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(item.key)}`;
+      window.location.href = `/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(item.key.split('/').pop())}`;
     };
     container.appendChild(card);
   });
 }
 
+// Upload UI bindings (same as before)
 document.getElementById('openUpload').onclick = () => document.getElementById('uploadModal').classList.add('active');
 document.getElementById('closeModal').onclick = () => {
   document.getElementById('uploadModal').classList.remove('active');
@@ -123,6 +161,6 @@ function showToast(msg) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  loadGallery(); // No loadGroups
+  loadGroups();
+  loadGallery();
 });
-
