@@ -1,67 +1,42 @@
-<!-- gallery.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gallery</title>
-  <link rel="stylesheet" href="/styles.css" />
-</head>
-<body>
-  <h1>📁 Art Gallery</h1>
-  <div id="groupButtons"></div>
-  <div id="gallery"></div>
-  <script src="/script.js"></script>
-</body>
-</html>
-
-
-// script.js
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
-let currentGroup = 'root';
 
-async function loadGroups() {
-  const res = await fetch(`${API_BASE}/api/groups`);
-  const groups = await res.json();
-  const container = document.getElementById('groupButtons');
-  container.innerHTML = '';
-  groups.forEach(group => {
-    const btn = document.createElement('button');
-    btn.className = 'group-btn';
-    btn.textContent = group;
-    btn.onclick = () => {
-      currentGroup = group;
-      loadGallery(group);
-    };
-    container.appendChild(btn);
-  });
+function getParams() {
+  const url = new URL(window.location.href);
+  return {
+    group: url.searchParams.get('group') || 'root',
+    filename: url.searchParams.get('filename')
+  };
 }
 
-async function loadGallery(group = 'root') {
-  const res = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
-  const items = await res.json();
-  const container = document.getElementById('gallery');
-  container.innerHTML = '';
-  items.reverse().forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'card';
+function loadMedia() {
+  const { group, filename } = getParams();
+  if (!filename) return;
 
-    const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
-    const media = document.createElement(isVideo ? 'video' : 'img');
-    media.src = `${API_BASE}${item.url}`;
-    media.className = 'media';
-    if (isVideo) media.controls = true;
-    
-    media.onclick = () => {
-      window.location.href = `/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(item.key)}`;
-    };
+  const container = document.getElementById('mediaContainer');
+  const filenameDisplay = document.getElementById('filenameDisplay');
+  const isVideo = filename.match(/\.(mp4|mov|webm)$/i);
+  const media = document.createElement(isVideo ? 'video' : 'img');
+  media.src = `${API_BASE}/api/image?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
+  if (isVideo) media.controls = true;
+  media.alt = filename;
+  media.style.maxWidth = '100%';
+  container.appendChild(media);
+  filenameDisplay.textContent = filename;
 
-    card.appendChild(media);
-    container.appendChild(card);
-  });
+  const shareLink = `${window.location.origin}/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
+  document.getElementById('shareLink').value = shareLink;
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  loadGroups();
-  loadGallery();
-});
+function openShare() {
+  document.getElementById('shareModal').classList.add('active');
+}
+
+function copyShareLink() {
+  const input = document.getElementById('shareLink');
+  input.select();
+  document.execCommand('copy');
+  alert('Link copied to clipboard!');
+  document.getElementById('shareModal').classList.remove('active');
+}
+
+window.addEventListener('DOMContentLoaded', loadMedia);

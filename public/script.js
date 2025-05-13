@@ -1,8 +1,6 @@
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
-let filesToUpload = [];
-let selectedGroup = 'root';
+let filesToUpload = [], currentGroup = 'root';
 
-// Load groups
 async function loadGroups() {
   const res = await fetch(`${API_BASE}/api/groups`);
   const groups = await res.json();
@@ -13,20 +11,19 @@ async function loadGroups() {
     btn.className = 'group-btn';
     btn.textContent = group;
     btn.onclick = () => {
-      selectedGroup = group;
+      currentGroup = group;
       loadGallery(group);
     };
     container.appendChild(btn);
   });
 }
 
-// Load gallery
 async function loadGallery(group = 'root') {
-  selectedGroup = group;
   const res = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
   const items = await res.json();
   const container = document.getElementById('gallery');
   container.innerHTML = '';
+
   items.reverse().forEach(item => {
     const card = document.createElement('div');
     card.className = 'card';
@@ -35,70 +32,54 @@ async function loadGallery(group = 'root') {
     media.src = `${API_BASE}${item.url}`;
     if (media.tagName === 'VIDEO') media.controls = true;
     media.className = 'media';
-    media.onclick = () => showImageModal(media.src);
     card.appendChild(media);
+    card.onclick = () => {
+      window.location.href = `/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(item.key)}`;
+    };
     container.appendChild(card);
   });
 }
 
-// Upload modal controls
-document.getElementById('openUpload').onclick = () =>
-  document.getElementById('uploadModal').classList.add('active');
-
+document.getElementById('openUpload').onclick = () => document.getElementById('uploadModal').classList.add('active');
 document.getElementById('closeModal').onclick = () => {
   document.getElementById('uploadModal').classList.remove('active');
   filesToUpload = [];
   document.getElementById('previewGrid').innerHTML = '';
   document.getElementById('dropzone').textContent = 'Drag & drop files here or click to select';
 };
-
-document.getElementById('dropzone').onclick = () =>
-  document.getElementById('fileInput').click();
-
-document.getElementById('dropzone').ondragover = e => {
-  e.preventDefault();
-  e.currentTarget.classList.add('hover');
-};
-
-document.getElementById('dropzone').ondragleave = e =>
-  e.currentTarget.classList.remove('hover');
-
+document.getElementById('dropzone').onclick = () => document.getElementById('fileInput').click();
+document.getElementById('dropzone').ondragover = e => { e.preventDefault(); e.currentTarget.classList.add('hover'); };
+document.getElementById('dropzone').ondragleave = e => e.currentTarget.classList.remove('hover');
 document.getElementById('dropzone').ondrop = e => {
   e.preventDefault();
   e.currentTarget.classList.remove('hover');
   filesToUpload = Array.from(e.dataTransfer.files);
   renderPreviewGrid();
 };
-
 document.getElementById('fileInput').onchange = e => {
   filesToUpload = Array.from(e.target.files);
   renderPreviewGrid();
 };
-
-// Upload action
 document.getElementById('uploadBtn').onclick = async () => {
   if (!filesToUpload.length) return;
   const btn = document.getElementById('uploadBtn');
   btn.disabled = true;
-  btn.textContent = 'Uploading…';
-
+  btn.textContent = 'Uploading...';
   for (const file of filesToUpload) {
-    const url = `${API_BASE}/api/upload?group=${encodeURIComponent(selectedGroup)}&filename=${encodeURIComponent(file.name)}`;
+    const url = `${API_BASE}/api/upload?group=${encodeURIComponent(currentGroup)}&filename=${encodeURIComponent(file.name)}`;
     await fetch(url, {
       method: 'PUT',
       headers: { 'Content-Type': file.type },
       body: file
     });
   }
-
   btn.disabled = false;
   btn.textContent = 'Upload';
   document.getElementById('closeModal').click();
-  loadGallery(selectedGroup);
+  loadGallery(currentGroup);
   showToast('Upload complete!');
 };
 
-// Preview grid
 function renderPreviewGrid() {
   const previewGrid = document.getElementById('previewGrid');
   previewGrid.innerHTML = '';
@@ -149,16 +130,6 @@ function renderPreviewGrid() {
   });
 }
 
-// Image modal
-function showImageModal(src) {
-  document.getElementById('modalImage').src = src;
-  document.getElementById('imageModal').style.display = 'flex';
-}
-function closeImageModal() {
-  document.getElementById('imageModal').style.display = 'none';
-}
-
-// Toast
 function showToast(msg) {
   const toast = document.getElementById('toast');
   toast.textContent = msg;
@@ -166,7 +137,6 @@ function showToast(msg) {
   setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// Init
 window.addEventListener('DOMContentLoaded', () => {
   loadGroups();
   loadGallery();

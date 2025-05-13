@@ -1,49 +1,42 @@
-// public/photo.js
-
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 
-function getQueryParams() {
-  const params = new URLSearchParams(window.location.search);
+function getParams() {
+  const url = new URL(window.location.href);
   return {
-    group: params.get('group') || 'root',
-    filename: params.get('filename')
+    group: url.searchParams.get('group') || 'root',
+    filename: url.searchParams.get('filename')
   };
 }
 
-async function loadPhoto() {
-  const { group, filename } = getQueryParams();
+function loadMedia() {
+  const { group, filename } = getParams();
   if (!filename) return;
 
-  // Load metadata
-  const resMeta = await fetch(`${API_BASE}/api/photo-meta?group=${group}&filename=${encodeURIComponent(filename)}`);
-  const meta = await resMeta.json();
-
-  const container = document.getElementById('photoContainer');
-  container.innerHTML = '';
-
+  const container = document.getElementById('mediaContainer');
+  const filenameDisplay = document.getElementById('filenameDisplay');
   const isVideo = filename.match(/\.(mp4|mov|webm)$/i);
   const media = document.createElement(isVideo ? 'video' : 'img');
-  media.src = `${API_BASE}/api/image?group=${group}&filename=${encodeURIComponent(filename)}`;
+  media.src = `${API_BASE}/api/image?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
   if (isVideo) media.controls = true;
-  media.className = 'main-media';
-
-  const title = document.createElement('h2');
-  title.textContent = meta.title || filename;
-
-  const tags = document.createElement('p');
-  tags.textContent = `Tags: ${(meta.tags || []).join(', ')}`;
-
-  const desc = document.createElement('p');
-  desc.textContent = meta.description || 'No description';
-
-  const date = document.createElement('p');
-  date.textContent = `Uploaded: ${meta.uploaded || 'Unknown date'}`;
-
+  media.alt = filename;
+  media.style.maxWidth = '100%';
   container.appendChild(media);
-  container.appendChild(title);
-  container.appendChild(tags);
-  container.appendChild(desc);
-  container.appendChild(date);
+  filenameDisplay.textContent = filename;
+
+  const shareLink = `${window.location.origin}/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
+  document.getElementById('shareLink').value = shareLink;
 }
 
-window.addEventListener('DOMContentLoaded', loadPhoto);
+function openShare() {
+  document.getElementById('shareModal').classList.add('active');
+}
+
+function copyShareLink() {
+  const input = document.getElementById('shareLink');
+  input.select();
+  document.execCommand('copy');
+  alert('Link copied to clipboard!');
+  document.getElementById('shareModal').classList.remove('active');
+}
+
+window.addEventListener('DOMContentLoaded', loadMedia);
