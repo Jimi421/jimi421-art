@@ -1,144 +1,114 @@
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
-let filesToUpload = [], currentGroup = 'root';
 
-async function loadGroups() {
-  const res = await fetch(`${API_BASE}/api/groups`);
-  const groups = await res.json();
-  const container = document.getElementById('groupButtons');
-  container.innerHTML = '';
-  groups.forEach(group => {
-    const btn = document.createElement('button');
-    btn.className = 'group-btn';
-    btn.textContent = group;
-    btn.onclick = () => {
-      currentGroup = group;
-      loadGallery(group);
-    };
-    container.appendChild(btn);
-  });
-}
-
-async function loadGallery(group = 'root') {
-  const res = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
-  const items = await res.json();
-  const container = document.getElementById('gallery');
-  container.innerHTML = '';
-
-  items.reverse().forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
-    const media = document.createElement(isVideo ? 'video' : 'img');
-    media.src = `${API_BASE}${item.url}`;
-    if (media.tagName === 'VIDEO') media.controls = true;
-    media.className = 'media';
-    card.appendChild(media);
-    card.onclick = () => {
-      window.location.href = `/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(item.key)}`;
-    };
-    container.appendChild(card);
-  });
-}
-
-document.getElementById('openUpload').onclick = () => document.getElementById('uploadModal').classList.add('active');
-document.getElementById('closeModal').onclick = () => {
-  document.getElementById('uploadModal').classList.remove('active');
-  filesToUpload = [];
-  document.getElementById('previewGrid').innerHTML = '';
-  document.getElementById('dropzone').textContent = 'Drag & drop files here or click to select';
-};
-document.getElementById('dropzone').onclick = () => document.getElementById('fileInput').click();
-document.getElementById('dropzone').ondragover = e => { e.preventDefault(); e.currentTarget.classList.add('hover'); };
-document.getElementById('dropzone').ondragleave = e => e.currentTarget.classList.remove('hover');
-document.getElementById('dropzone').ondrop = e => {
-  e.preventDefault();
-  e.currentTarget.classList.remove('hover');
-  filesToUpload = Array.from(e.dataTransfer.files);
-  renderPreviewGrid();
-};
-document.getElementById('fileInput').onchange = e => {
-  filesToUpload = Array.from(e.target.files);
-  renderPreviewGrid();
-};
-document.getElementById('uploadBtn').onclick = async () => {
-  if (!filesToUpload.length) return;
+// Upload handler
+document.getElementById('uploadBtn').addEventListener('click', async () => {
   const btn = document.getElementById('uploadBtn');
   btn.disabled = true;
   btn.textContent = 'Uploading...';
-  for (const file of filesToUpload) {
-    const url = `${API_BASE}/api/upload?group=${encodeURIComponent(currentGroup)}&filename=${encodeURIComponent(file.name)}`;
-    await fetch(url, {
+
+  const files = document.getElementById('fileInput').files;
+  for (const file of files) {
+    const uploadURL = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
+    await fetch(uploadURL, {
       method: 'PUT',
       headers: { 'Content-Type': file.type },
       body: file
     });
   }
-  btn.disabled = false;
+
   btn.textContent = 'Upload';
-  document.getElementById('closeModal').click();
-  loadGallery(currentGroup);
-  showToast('Upload complete!');
-};
+  btn.disabled = false;
+  document.getElementById('fileInput').value = '';
+  loadGallery();
+});
 
-function renderPreviewGrid() {
-  const previewGrid = document.getElementById('previewGrid');
-  previewGrid.innerHTML = '';
-  filesToUpload.forEach((file, index) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const div = document.createElement('div');
-      div.className = 'preview';
-      const img = document.createElement('img');
-      img.src = reader.result;
-      div.appendChild(img);
+// Load gallery from Worker
+async function loadGallery() {
+  // 1) Fetch the list from your Worker
+  const res = await fetch(`${API_BASE}/api/gallery`);
+  const items = await res.json();
 
-      const removeBtn = document.createElement('button');
-      removeBtn.textContent = '✕';
-      removeBtn.onclick = () => {
-        filesToUpload.splice(index, 1);
-        renderPreviewGrid();
-        showToast('Removed from preview');
-      };
-      div.appendChild(removeBtn);
+  // 2) Clear and render
+  const container = document.getElementById('gallery');
+  container.innerHTML = '';
 
-      const rotateBtn = document.createElement('button');
-      rotateBtn.textContent = '⟳';
-      rotateBtn.className = 'rotate-btn';
-      rotateBtn.onclick = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const image = new Image();
-        image.onload = () => {
-          canvas.width = image.height;
-          canvas.height = image.width;
-          ctx.translate(canvas.width / 2, canvas.height / 2);
-          ctx.rotate(90 * Math.PI / 180);
-          ctx.drawImage(image, -image.width / 2, -image.height / 2);
-          canvas.toBlob(blob => {
-            filesToUpload[index] = new File([blob], file.name, { type: file.type });
-            renderPreviewGrid();
-            showToast('Rotated preview');
-          }, file.type);
-        };
-        image.src = reader.result;
-      };
-      div.appendChild(rotateBtn);
-
-      previewGrid.appendChild(div);
-    };
-    reader.readAsDataURL(file);
+  // Show newest first
+  items.reverse().forEach(item => {
+    const img = document.createElement('img');
+    // 🔑 prefix with API_BASE so it hits your Worker
+    img.src = `${API_BASE}${item.url}`;
+    img.className = 'thumb';
+    container.appendChild(img);
   });
 }
 
-function showToast(msg) {
-  const toast = document.getElementById('toast');
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 3000);
+// Initial load
+window.addEventListener('DOMContentLoaded', loadGallery);
+const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
+
+// 1) Load and render groups
+async function loadGroups() {
+  const res = await fetch(`${API_BASE}/api/groups`);
+  const groups = await res.json();       // e.g. ["root","trees","houses"]
+  const container = document.getElementById('groups');
+  container.innerHTML = '';
+
+  groups.forEach(group => {
+    const btn = document.createElement('button');
+    btn.textContent = group;
+    btn.style.marginRight = '0.5rem';
+    btn.onclick = () => loadGallery(group);
+    container.appendChild(btn);
+  });
 }
 
+// 2) Upload handler (unchanged)
+document.getElementById('uploadBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+
+  const files = document.getElementById('fileInput').files;
+  for (const file of files) {
+    const uploadURL = `${API_BASE}/api/upload?group=${encodeURIComponent(selectedGroup)}&filename=${encodeURIComponent(file.name)}`;
+    await fetch(uploadURL, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file
+    });
+  }
+
+  btn.textContent = 'Upload';
+  btn.disabled = false;
+  document.getElementById('fileInput').value = '';
+  loadGallery(selectedGroup);
+});
+
+// track currently selected group (default to “root”)
+let selectedGroup = 'root';
+
+// 3) Load gallery, optionally filtered by group
+async function loadGallery(group = 'root') {
+  selectedGroup = group;                     // remember for upload
+  const res = await fetch(
+    `${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`
+  );
+  const items = await res.json();
+
+  const container = document.getElementById('gallery');
+  container.innerHTML = '';
+
+  items.reverse().forEach(item => {
+    const img = document.createElement('img');
+    img.src = `${API_BASE}${item.url}`;
+    img.className = 'thumb';
+    container.appendChild(img);
+  });
+}
+
+// 4) Initialize both menus on load
 window.addEventListener('DOMContentLoaded', () => {
   loadGroups();
-  loadGallery();
+  loadGallery();  // shows “root” by default
 });
 
