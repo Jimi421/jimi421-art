@@ -22,9 +22,22 @@
   <div id="uploadModal" class="modal">
     <div class="modal-content">
       <h2>Upload Files</h2>
+      
+      <!-- ─── Group Picker ─── -->
+      <label for="groupSelect">Upload to Group:</label>
+      <select id="groupSelect">
+        <option value="root">root</option>
+        <option value="__new__">➕ New Group...</option>
+      </select>
+      <input type="text" id="newGroupInput"
+             placeholder="Enter new group name"
+             style="display:none; margin:0.5rem 0;" />
+
+      <!-- ─── File Drop + Preview ─── -->
       <div id="dropzone" class="dropzone">Drag & drop files here or click to select</div>
       <input type="file" id="fileInput" multiple accept="image/*,video/*" />
       <div id="previewGrid"></div>
+
       <button id="uploadBtn" class="btn upload">Upload</button>
       <button id="closeModal" class="btn close">Cancel</button>
     </div>
@@ -39,7 +52,6 @@
   <!-- Toast notification -->
   <div id="toast"></div>
 
-  <!-- Scripts -->
   <script src="script.js"></script>
 </body>
 </html>
