@@ -1,22 +1,7 @@
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 let filesToUpload = [], currentGroup = 'root';
 
-async function loadGroups() {
-  const res = await fetch(`${API_BASE}/api/groups`);
-  const groups = await res.json();
-  const container = document.getElementById('groupButtons');
-  container.innerHTML = '';
-  groups.forEach(group => {
-    const btn = document.createElement('button');
-    btn.className = 'group-btn';
-    btn.textContent = group;
-    btn.onclick = () => {
-      currentGroup = group;
-      loadGallery(group);
-    };
-    container.appendChild(btn);
-  });
-}
+// Removed loadGroups()
 
 async function loadGallery(group = 'root') {
   const res = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
@@ -138,7 +123,6 @@ function showToast(msg) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  loadGroups();
-  loadGallery();
+  loadGallery(); // No loadGroups
 });
 
