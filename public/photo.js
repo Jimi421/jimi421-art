@@ -1,26 +1,28 @@
+// public/photo.js
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 
-function getParams() {
-  const url = new URL(window.location.href);
+function getQueryParams() {
+  const params = new URLSearchParams(window.location.search);
   return {
-    group: url.searchParams.get('group') || 'root',
-    filename: url.searchParams.get('filename')
+    group: params.get('group') || 'root',
+    filename: params.get('filename')
   };
 }
 
-function loadMedia() {
-  const { group, filename } = getParams();
+async function loadPhoto() {
+  const { group, filename } = getQueryParams();
   if (!filename) return;
 
   const container = document.getElementById('mediaContainer');
   const filenameDisplay = document.getElementById('filenameDisplay');
   const isVideo = filename.match(/\.(mp4|mov|webm)$/i);
   const media = document.createElement(isVideo ? 'video' : 'img');
-  media.src = `${API_BASE}/api/image?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
+  media.src = `${API_BASE}/api/image?group=${group}&filename=${encodeURIComponent(filename)}`;
   if (isVideo) media.controls = true;
   media.alt = filename;
-  media.style.maxWidth = '100%';
+  media.className = 'main-media';
   container.appendChild(media);
+
   filenameDisplay.textContent = filename;
 
   const shareLink = `${window.location.origin}/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
@@ -39,4 +41,4 @@ function copyShareLink() {
   document.getElementById('shareModal').classList.remove('active');
 }
 
-window.addEventListener('DOMContentLoaded', loadMedia);
+window.addEventListener('DOMContentLoaded', loadPhoto);
