@@ -9,87 +9,96 @@ const corsHeaders = {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const { pathname, searchParams } = url;
-    const method = request.method;
 
-    // 1. CORS preflight
-    if (method === 'OPTIONS') {
+    // ——— 1. CORS preflight ———
+    if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    // 2. PUT /api/upload?group=…&filename=…
-    if (method === 'PUT' && pathname === '/api/upload') {
-      const group    = searchParams.get('group')    || 'root';
-      const filename = searchParams.get('filename');
+    // ——— 2. Upload: PUT /api/upload?filename=XYZ.jpg ———
+    if (request.method === 'PUT' && url.pathname === '/api/upload') {
+      const filename = url.searchParams.get('filename');
       if (!filename) {
-        return new Response('Missing filename', { status: 400, headers: corsHeaders });
+        return new Response('Missing filename', {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+        });
       }
-      const key = group === 'root' ? filename : `${group}/${filename}`;
-      await env.ART_BUCKET.put(key, request.body, {
-        httpMetadata: { contentType: request.headers.get('Content-Type') || 'application/octet-stream' }
+      console.log(`🔼 Uploading: ${filename}`);
+      await env.ART_BUCKET.put(filename, request.body, {
+        httpMetadata: {
+          contentType: request.headers.get('Content-Type') || 'application/octet-stream'
+        }
       });
-      // Optionally track in KV
+      // Track in KV for metadata (optional)
       const current = JSON.parse(await env.GALLERY_KV.get('items') || '[]');
-      if (!current.includes(key)) {
-        current.push(key);
+      if (!current.includes(filename)) {
+        current.push(filename);
         await env.GALLERY_KV.put('items', JSON.stringify(current));
       }
       return new Response('Uploaded', { status: 200, headers: corsHeaders });
     }
 
-    // 3. GET /api/groups
-    if (method === 'GET' && pathname === '/api/groups') {
+    // ——— 3. Gallery list: GET /api/gallery ———
+    if (request.method === 'GET' && url.pathname === '/api/gallery') {
+      console.log(`📋 Listing gallery`);
       const list = await env.ART_BUCKET.list();
-      // extract first path segment as group, default to 'root'
-      const groups = new Set();
-      for (const obj of list.objects) {
-        const parts = obj.key.split('/');
-        groups.add(parts.length > 1 ? parts[0] : 'root');
-      }
-      return new Response(
-        JSON.stringify(Array.from(groups)),
-        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      );
-    }
-
-    // 4. GET /api/gallery?group=…
-    if (method === 'GET' && pathname === '/api/gallery') {
-      const group  = searchParams.get('group') || 'root';
-      const prefix = group === 'root' ? '' : `${group}/`;
-      const list   = await env.ART_BUCKET.list({ prefix });
-      const items  = list.objects.map(obj => {
-        // strip prefix from key for client display
-        const key = prefix ? obj.key.slice(prefix.length) : obj.key;
-        return {
-          group,
-          key,
-          url: `/api/image?filename=${encodeURIComponent(obj.key)}`
-        };
-      });
-      return new Response(
-        JSON.stringify(items),
-        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      );
-    }
-
-    // 5. GET /api/image?filename=…
-    if (method === 'GET' && pathname === '/api/image') {
-      const filename = searchParams.get('filename');
-      if (!filename) {
-        return new Response('Missing filename', { status: 400, headers: corsHeaders });
-      }
-      const object = await env.ART_BUCKET.get(filename);
-      if (!object) {
-        return new Response('Not found', { status: 404, headers: corsHeaders });
-      }
-      const contentType = object.httpMetadata?.contentType || 'application/octet-stream';
-      return new Response(object.body, {
+      const items = list.objects.map(obj => ({
+        key: obj.key,
+        url: `/api/image?filename=${encodeURIComponent(obj.key)}`
+      }));
+      return new Response(JSON.stringify(items), {
         status: 200,
-        headers: { 'Content-Type': contentType, ...corsHeaders }
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
       });
     }
 
-    // 6. Fallback
+    // ——— 4. Serve image: GET /api/image?filename=XYZ.jpg ———
+    if (request.method === 'GET' && url.pathname === '/api/image') {
+      const filename = url.searchParams.get('filename');
+      console.log(`🔍 Fetching image: ${filename}`);
+      if (!filename) {
+        return new Response('Missing filename', {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+        });
+      }
+      try {
+        const object = await env.ART_BUCKET.get(filename);
+        if (!object) {
+          console.log(`🛑 Not found: ${filename}`);
+          return new Response('Not found', {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+          });
+        }
+        const contentType = object.httpMetadata?.contentType || 'image/jpeg';
+        console.log(`✅ Serving: ${filename} as ${contentType}`);
+        return new Response(object.body, {
+          status: 200,
+          headers: { 'Content-Type': contentType, ...corsHeaders }
+        });
+      } catch (err) {
+        console.error(`❌ Error serving ${filename}:`, err);
+        return new Response('Error retrieving file', {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+        });
+      }
+    }
+
+    // ——— 5. Debug: GET /api/debug ———
+    if (request.method === 'GET' && url.pathname === '/api/debug') {
+      console.log(`🛠️ Debug endpoint hit`);
+      const list = await env.ART_BUCKET.list();
+      const keys = list.objects.map(o => o.key);
+      return new Response(JSON.stringify({ keys }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
+    // ——— 6. Fallback ———
     return new Response('Not Found', { status: 404, headers: corsHeaders });
   }
 };
