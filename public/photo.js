@@ -23,14 +23,19 @@ async function loadPhoto() {
   media.className = 'main-media';
   container.appendChild(media);
 
+  // Update visible metadata
   filenameDisplay.textContent = filename;
+  document.getElementById('groupName').textContent = group;
+  document.getElementById('groupLink').href = `/gallery.html?group=${encodeURIComponent(group)}`;
+  document.getElementById('groupLink').textContent = group;
 
+  // Set share link
   const shareLink = `${window.location.origin}/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
   document.getElementById('shareLink').value = shareLink;
 }
 
 function openShare() {
-  document.getElementById('shareModal').classList.add('active');
+  document.getElementById('shareLink').style.display = 'block';
 }
 
 function copyShareLink() {
@@ -38,7 +43,6 @@ function copyShareLink() {
   input.select();
   document.execCommand('copy');
   alert('Link copied to clipboard!');
-  document.getElementById('shareModal').classList.remove('active');
 }
 
 window.addEventListener('DOMContentLoaded', loadPhoto);
