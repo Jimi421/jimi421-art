@@ -12,16 +12,19 @@
       background: #fff;
       color: #333;
     }
+
     .breadcrumb {
       padding: 1rem;
       background: #f1f1f1;
       font-size: 0.9rem;
       color: #555;
     }
+
     .breadcrumb a {
       text-decoration: none;
       color: #3498db;
     }
+
     .container {
       max-width: 1200px;
       margin: auto;
@@ -30,10 +33,12 @@
       flex-wrap: wrap;
       gap: 2rem;
     }
+
     .main-image {
       flex: 2 1 500px;
       max-width: 100%;
     }
+
     .main-image #mediaContainer {
       width: 100%;
       height: auto;
@@ -45,6 +50,7 @@
       border-radius: 10px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.1);
     }
+
     .main-image img,
     .main-image video {
       max-width: 100%;
@@ -54,6 +60,7 @@
       display: block;
       margin: auto;
     }
+
     .meta {
       flex: 1 1 300px;
       background: #fafafa;
@@ -61,41 +68,46 @@
       border-radius: 8px;
       box-shadow: 0 0 8px rgba(0,0,0,0.05);
     }
-    .meta h2 {
-      margin-top: 0;
+
+    .meta input[type="text"] {
+      width: 100%;
+      padding: 0.4rem;
+      margin-bottom: 0.5rem;
     }
-    .meta .tags {
-      margin-top: 1rem;
-    }
+
     .meta .tags span {
       display: inline-block;
-      background: #eee;
+      background: #e3f2fd;
+      color: #0077c2;
       padding: 0.3rem 0.6rem;
       margin: 0.2rem;
       border-radius: 4px;
       font-size: 0.8rem;
+      cursor: pointer;
     }
+
+    .meta button {
+      margin-top: 1rem;
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
     .share {
       width: 100%;
       text-align: center;
       margin-top: 2rem;
     }
+
     .share input {
       width: 80%;
       padding: 0.5rem;
       margin-top: 1rem;
       border: 1px solid #ccc;
       border-radius: 4px;
-    }
-    .share button {
-      background: #3498db;
-      color: white;
-      border: none;
-      padding: 0.6rem 1.2rem;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 1rem;
-      margin-top: 0.5rem;
     }
   </style>
 </head>
@@ -113,14 +125,23 @@
 
     <aside class="meta">
       <h2 id="filenameDisplay">Loading...</h2>
-      <p><strong>Group:</strong> <span id="groupName">...</span></p>
-      <p><strong>Uploaded:</strong> <span id="date">...</span></p>
-      <p>This piece is part of the Jimi421 collection. Additional captions or artist notes will go here in future upgrades.</p>
-      <div class="tags">
-        <span>#art</span>
-        <span>#creative</span>
-        <span>#preview</span>
+
+      <label for="metaTitle"><strong>Title:</strong></label>
+      <input id="metaTitle" type="text" placeholder="Enter title" />
+
+      <p><strong>Tags:</strong></p>
+      <div id="tagsDisplay" class="tags"></div>
+      <div id="tagEditor">
+        <input id="tagInput" type="text" placeholder="New tag" />
+        <button id="addTagBtn">Add Tag</button>
       </div>
+
+      <label>
+        <input type="checkbox" id="favoriteChk" />
+        ⭐ Mark as Favorite
+      </label>
+
+      <button id="saveMetaBtn">💾 Save Info</button>
     </aside>
 
     <div class="share">
