@@ -3,83 +3,110 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>View Photo</title>
+  <title>Art Viewer</title>
   <link rel="stylesheet" href="/styles.css">
   <style>
-    .photo-page { display: flex; flex-direction: column; align-items: center; padding: 2rem; }
-    .photo-wrapper { max-width: 90vw; max-height: 80vh; }
-    .photo-wrapper img, .photo-wrapper video {
-      max-width: 100%;
-      max-height: 100%;
-      border-radius: 10px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #fff;
+      color: #333;
     }
-    .photo-meta { margin-top: 1.5rem; text-align: center; }
-    .photo-meta h2 { margin-bottom: 0.5rem; }
-    .share-btn {
-      padding: 0.4rem 1rem;
+    .breadcrumb {
+      padding: 1rem;
+      background: #f1f1f1;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    .breadcrumb a {
+      text-decoration: none;
+      color: #3498db;
+    }
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 2rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+    }
+    .main-image {
+      flex: 2 1 500px;
+      max-width: 100%;
+    }
+    .main-image img,
+    .main-image video {
+      max-width: 100%;
+      max-height: 80vh;
+      object-fit: contain;
+      display: block;
+      margin: auto;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+    .meta {
+      flex: 1 1 300px;
+      background: #fafafa;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.05);
+    }
+    .meta h2 {
+      margin-top: 0;
+    }
+    .meta .tags {
+      margin-top: 1rem;
+    }
+    .meta .tags span {
+      display: inline-block;
+      background: #eee;
+      padding: 0.3rem 0.6rem;
+      margin: 0.2rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+    .share {
+      width: 100%;
+      text-align: center;
+      margin-top: 2rem;
+    }
+    .share button {
       background: #3498db;
-      border: none;
       color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
       border-radius: 5px;
       cursor: pointer;
       font-size: 1rem;
-      margin-top: 0.5rem;
-    }
-
-    /* Share Modal */
-    #shareModal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      z-index: 999;
-      justify-content: center;
-      align-items: center;
-    }
-    #shareModal.active { display: flex; }
-    .modal-box {
-      background: white;
-      padding: 2rem;
-      border-radius: 8px;
-      max-width: 400px;
-      width: 90%;
-      box-shadow: 0 0 20px rgba(0,0,0,0.3);
-      text-align: center;
-    }
-    .modal-box button {
-      margin-top: 1rem;
-      padding: 0.5rem 1rem;
-      background: #2ecc71;
-      border: none;
-      border-radius: 4px;
-      color: white;
-      cursor: pointer;
-    }
-    .modal-box input {
-      width: 100%;
-      margin-top: 1rem;
-      padding: 0.5rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
     }
   </style>
 </head>
 <body>
-  <div class="photo-page">
-    <div class="photo-wrapper" id="mediaContainer"></div>
-    <div class="photo-meta">
-      <h2 id="filenameDisplay"></h2>
-      <button class="share-btn" onclick="openShare()">Share</button>
-    </div>
-  </div>
+  <nav class="breadcrumb">
+    <a href="/">Home</a> /
+    <a id="groupLink" href="#">Group</a> /
+    <span id="photoTitle">Filename</span>
+  </nav>
 
-  <!-- Share Modal -->
-  <div id="shareModal">
-    <div class="modal-box">
-      <h3>Share this media</h3>
-      <input type="text" id="shareLink" readonly>
-      <button onclick="copyShareLink()">📋 Copy to Clipboard</button>
+  <div class="container">
+    <div class="main-image">
+      <img id="media" src="" alt="Art Preview" />
+    </div>
+
+    <aside class="meta">
+      <h2 id="title">Filename</h2>
+      <p><strong>Group:</strong> <span id="groupName">Group</span></p>
+      <p><strong>Uploaded:</strong> <span id="date">Date</span></p>
+      <p>This is a placeholder description. In a full version, captions or artist notes could go here.</p>
+      <div class="tags">
+        <span>#art</span>
+        <span>#gallery</span>
+        <span>#preview</span>
+      </div>
+    </aside>
+
+    <div class="share">
+      <button onclick="showShare()">Share</button>
     </div>
   </div>
 
