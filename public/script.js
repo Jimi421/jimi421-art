@@ -1,114 +1,174 @@
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
+let filesToUpload = [];
+let selectedGroup = 'root';
 
-// Upload handler
-document.getElementById('uploadBtn').addEventListener('click', async () => {
-  const btn = document.getElementById('uploadBtn');
-  btn.disabled = true;
-  btn.textContent = 'Uploading...';
-
-  const files = document.getElementById('fileInput').files;
-  for (const file of files) {
-    const uploadURL = `${API_BASE}/api/upload?filename=${encodeURIComponent(file.name)}`;
-    await fetch(uploadURL, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type },
-      body: file
-    });
-  }
-
-  btn.textContent = 'Upload';
-  btn.disabled = false;
-  document.getElementById('fileInput').value = '';
-  loadGallery();
-});
-
-// Load gallery from Worker
-async function loadGallery() {
-  // 1) Fetch the list from your Worker
-  const res = await fetch(`${API_BASE}/api/gallery`);
-  const items = await res.json();
-
-  // 2) Clear and render
-  const container = document.getElementById('gallery');
-  container.innerHTML = '';
-
-  // Show newest first
-  items.reverse().forEach(item => {
-    const img = document.createElement('img');
-    // 🔑 prefix with API_BASE so it hits your Worker
-    img.src = `${API_BASE}${item.url}`;
-    img.className = 'thumb';
-    container.appendChild(img);
-  });
-}
-
-// Initial load
-window.addEventListener('DOMContentLoaded', loadGallery);
-const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
-
-// 1) Load and render groups
+// Load groups
 async function loadGroups() {
   const res = await fetch(`${API_BASE}/api/groups`);
-  const groups = await res.json();       // e.g. ["root","trees","houses"]
-  const container = document.getElementById('groups');
+  const groups = await res.json();
+  const container = document.getElementById('groupButtons');
   container.innerHTML = '';
-
   groups.forEach(group => {
     const btn = document.createElement('button');
+    btn.className = 'group-btn';
     btn.textContent = group;
-    btn.style.marginRight = '0.5rem';
-    btn.onclick = () => loadGallery(group);
+    btn.onclick = () => {
+      selectedGroup = group;
+      loadGallery(group);
+    };
     container.appendChild(btn);
   });
 }
 
-// 2) Upload handler (unchanged)
-document.getElementById('uploadBtn').addEventListener('click', async () => {
+// Load gallery
+async function loadGallery(group = 'root') {
+  selectedGroup = group;
+  const res = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
+  const items = await res.json();
+  const container = document.getElementById('gallery');
+  container.innerHTML = '';
+  items.reverse().forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
+    const media = document.createElement(isVideo ? 'video' : 'img');
+    media.src = `${API_BASE}${item.url}`;
+    if (media.tagName === 'VIDEO') media.controls = true;
+    media.className = 'media';
+    media.onclick = () => showImageModal(media.src);
+    card.appendChild(media);
+    container.appendChild(card);
+  });
+}
+
+// Upload modal controls
+document.getElementById('openUpload').onclick = () =>
+  document.getElementById('uploadModal').classList.add('active');
+
+document.getElementById('closeModal').onclick = () => {
+  document.getElementById('uploadModal').classList.remove('active');
+  filesToUpload = [];
+  document.getElementById('previewGrid').innerHTML = '';
+  document.getElementById('dropzone').textContent = 'Drag & drop files here or click to select';
+};
+
+document.getElementById('dropzone').onclick = () =>
+  document.getElementById('fileInput').click();
+
+document.getElementById('dropzone').ondragover = e => {
+  e.preventDefault();
+  e.currentTarget.classList.add('hover');
+};
+
+document.getElementById('dropzone').ondragleave = e =>
+  e.currentTarget.classList.remove('hover');
+
+document.getElementById('dropzone').ondrop = e => {
+  e.preventDefault();
+  e.currentTarget.classList.remove('hover');
+  filesToUpload = Array.from(e.dataTransfer.files);
+  renderPreviewGrid();
+};
+
+document.getElementById('fileInput').onchange = e => {
+  filesToUpload = Array.from(e.target.files);
+  renderPreviewGrid();
+};
+
+// Upload action
+document.getElementById('uploadBtn').onclick = async () => {
+  if (!filesToUpload.length) return;
   const btn = document.getElementById('uploadBtn');
   btn.disabled = true;
-  btn.textContent = 'Uploading...';
+  btn.textContent = 'Uploading…';
 
-  const files = document.getElementById('fileInput').files;
-  for (const file of files) {
-    const uploadURL = `${API_BASE}/api/upload?group=${encodeURIComponent(selectedGroup)}&filename=${encodeURIComponent(file.name)}`;
-    await fetch(uploadURL, {
+  for (const file of filesToUpload) {
+    const url = `${API_BASE}/api/upload?group=${encodeURIComponent(selectedGroup)}&filename=${encodeURIComponent(file.name)}`;
+    await fetch(url, {
       method: 'PUT',
       headers: { 'Content-Type': file.type },
       body: file
     });
   }
 
-  btn.textContent = 'Upload';
   btn.disabled = false;
-  document.getElementById('fileInput').value = '';
+  btn.textContent = 'Upload';
+  document.getElementById('closeModal').click();
   loadGallery(selectedGroup);
-});
+  showToast('Upload complete!');
+};
 
-// track currently selected group (default to “root”)
-let selectedGroup = 'root';
+// Preview grid
+function renderPreviewGrid() {
+  const previewGrid = document.getElementById('previewGrid');
+  previewGrid.innerHTML = '';
+  filesToUpload.forEach((file, index) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const div = document.createElement('div');
+      div.className = 'preview';
+      const img = document.createElement('img');
+      img.src = reader.result;
+      div.appendChild(img);
 
-// 3) Load gallery, optionally filtered by group
-async function loadGallery(group = 'root') {
-  selectedGroup = group;                     // remember for upload
-  const res = await fetch(
-    `${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`
-  );
-  const items = await res.json();
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = '✕';
+      removeBtn.onclick = () => {
+        filesToUpload.splice(index, 1);
+        renderPreviewGrid();
+        showToast('Removed from preview');
+      };
+      div.appendChild(removeBtn);
 
-  const container = document.getElementById('gallery');
-  container.innerHTML = '';
+      const rotateBtn = document.createElement('button');
+      rotateBtn.textContent = '⟳';
+      rotateBtn.className = 'rotate-btn';
+      rotateBtn.onclick = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const image = new Image();
+        image.onload = () => {
+          canvas.width = image.height;
+          canvas.height = image.width;
+          ctx.translate(canvas.width / 2, canvas.height / 2);
+          ctx.rotate(90 * Math.PI / 180);
+          ctx.drawImage(image, -image.width / 2, -image.height / 2);
+          canvas.toBlob(blob => {
+            filesToUpload[index] = new File([blob], file.name, { type: file.type });
+            renderPreviewGrid();
+            showToast('Rotated preview');
+          }, file.type);
+        };
+        image.src = reader.result;
+      };
+      div.appendChild(rotateBtn);
 
-  items.reverse().forEach(item => {
-    const img = document.createElement('img');
-    img.src = `${API_BASE}${item.url}`;
-    img.className = 'thumb';
-    container.appendChild(img);
+      previewGrid.appendChild(div);
+    };
+    reader.readAsDataURL(file);
   });
 }
 
-// 4) Initialize both menus on load
+// Image modal
+function showImageModal(src) {
+  document.getElementById('modalImage').src = src;
+  document.getElementById('imageModal').style.display = 'flex';
+}
+function closeImageModal() {
+  document.getElementById('imageModal').style.display = 'none';
+}
+
+// Toast
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// Init
 window.addEventListener('DOMContentLoaded', () => {
   loadGroups();
-  loadGallery();  // shows “root” by default
+  loadGallery();
 });
 
