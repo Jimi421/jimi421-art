@@ -169,3 +169,15 @@ body {
   color: #ccc;
   margin-top: 0.25rem;
 }
+
+.editable-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+}
+
+.editable-title input {
+  font-size: 1.25rem;
+  width: 100%;
+}

@@ -61,8 +61,15 @@
       border-radius: 8px;
       box-shadow: 0 0 8px rgba(0,0,0,0.05);
     }
-    .meta h2 {
-      margin-top: 0;
+    .editable-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+      cursor: pointer;
+    }
+    .editable-title input {
+      font-size: 1.25rem;
+      width: 100%;
     }
     .meta .tags {
       margin-top: 1rem;
@@ -112,15 +119,20 @@
     </div>
 
     <aside class="meta">
-      <h2 id="filenameDisplay">Loading...</h2>
-      <p><strong>Group:</strong> <span id="groupName">...</span></p>
+      <div id="editableTitle" class="editable-title">
+        <span id="titleText">Loading...</span>
+        <input type="text" id="titleInput" style="display:none;" />
+      </div>
+      <p><strong>Group:</strong> <span id="groupName">root</span></p>
       <p><strong>Uploaded:</strong> <span id="date">...</span></p>
       <p>This piece is part of the Jimi421 collection. Additional captions or artist notes will go here in future upgrades.</p>
-      <div class="tags">
-        <span>#art</span>
-        <span>#creative</span>
-        <span>#preview</span>
+      <div class="tags" id="tagsDisplay">
+        <!-- Tags dynamically added here -->
       </div>
+      <input type="text" id="tagInput" placeholder="Add tag" />
+      <button id="addTagBtn">Add Tag</button><br><br>
+      <label><input type="checkbox" id="favoriteChk" /> Mark as Favorite</label><br><br>
+      <button id="saveMetaBtn">💾 Save Info</button>
     </aside>
 
     <div class="share">
@@ -130,6 +142,6 @@
     </div>
   </div>
 
-  <script src="/photo.js"></script>
+  <script src="/scripts/photo.js"></script>
 </body>
 </html>
