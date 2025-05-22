@@ -24,12 +24,13 @@ async function loadPhoto() {
   document.getElementById('groupName').textContent = group;
   document.getElementById('groupLink').href = `/gallery.html?group=${encodeURIComponent(group)}`;
   document.getElementById('groupLink').textContent = group;
-  document.getElementById('shareLink').value =
-    `${window.location.origin}/photo.html?group=${group}&filename=${encodeURIComponent(filename)}`;
+
+  document.getElementById('shareLink').value = `${window.location.origin}/photo.html?group=${group}&filename=${encodeURIComponent(filename)}`;
 
   const titleText = document.getElementById('titleText');
   const titleInput = document.getElementById('titleInput');
 
+  // Load metadata
   try {
     const res = await fetch(`${API_BASE}/api/metadata?group=${group}&filename=${filename}`);
     if (res.ok) {
@@ -39,6 +40,7 @@ async function loadPhoto() {
       titleInput.value = title;
 
       document.getElementById('favoriteChk').checked = meta.favorite || false;
+
       if (Array.isArray(meta.tags)) {
         meta.tags.forEach(addTagToDisplay);
       }
@@ -46,7 +48,8 @@ async function loadPhoto() {
       titleText.textContent = filename;
       titleInput.value = filename;
     }
-  } catch {
+  } catch (err) {
+    console.warn('Metadata fetch failed:', err);
     titleText.textContent = filename;
     titleInput.value = filename;
   }

@@ -1,42 +1,89 @@
-const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gallery View</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <nav class="breadcrumb">
+    <a href="/">Home</a> /
+    <span id="groupLabel">Gallery</span>
+  </nav>
 
-function getParams() {
-  const url = new URL(window.location.href);
-  return {
-    group: url.searchParams.get('group') || 'root',
-    filename: url.searchParams.get('filename')
-  };
-}
+  <header>
+    <h2 id="groupTitle">📁 Full Gallery</h2>
+  </header>
 
-function loadMedia() {
-  const { group, filename } = getParams();
-  if (!filename) return;
+  <main id="groupGallery" class="gallery-grid"></main>
 
-  const container = document.getElementById('mediaContainer');
-  const filenameDisplay = document.getElementById('filenameDisplay');
-  const isVideo = filename.match(/\.(mp4|mov|webm)$/i);
-  const media = document.createElement(isVideo ? 'video' : 'img');
-  media.src = `${API_BASE}/api/image?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
-  if (isVideo) media.controls = true;
-  media.alt = filename;
-  media.style.maxWidth = '100%';
-  container.appendChild(media);
-  filenameDisplay.textContent = filename;
+  <script>
+    const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 
-  const shareLink = `${window.location.origin}/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
-  document.getElementById('shareLink').value = shareLink;
-}
+    async function loadGroupGallery() {
+      const res = await fetch(`${API_BASE}/api/gallery`);
+      const items = await res.json();
+      const gallery = document.getElementById('groupGallery');
+      gallery.innerHTML = '';
 
-function openShare() {
-  document.getElementById('shareModal').classList.add('active');
-}
+      const filtered = items; // flat mode: show all
 
-function copyShareLink() {
-  const input = document.getElementById('shareLink');
-  input.select();
-  document.execCommand('copy');
-  alert('Link copied to clipboard!');
-  document.getElementById('shareModal').classList.remove('active');
-}
+      if (!filtered.length) {
+        gallery.innerHTML = '<p style="text-align:center;">No images found.</p>';
+        return;
+      }
 
-window.addEventListener('DOMContentLoaded', loadMedia);
+      for (const item of filtered.reverse()) {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'media-wrapper';
+
+        const isVideo = item.key.match(/\.(mp4|mov|webm)$/i);
+        const media = document.createElement(isVideo ? 'video' : 'img');
+        media.src = `${API_BASE}${item.url}`;
+        if (isVideo) media.controls = true;
+        media.className = 'media';
+
+        const star = document.createElement('div');
+        star.className = 'favorite-star';
+        star.textContent = '⭐';
+        wrapper.appendChild(media);
+        wrapper.appendChild(star);
+        card.appendChild(wrapper);
+
+        const caption = document.createElement('div');
+        caption.className = 'caption';
+        caption.textContent = ''; // updated after metadata fetch
+        card.appendChild(caption);
+
+        const filename = item.key;
+        const group = 'root';
+
+        try {
+          const metaRes = await fetch(`${API_BASE}/api/metadata?group=${group}&filename=${filename}`);
+          if (metaRes.ok) {
+            const meta = await metaRes.json();
+            caption.textContent = meta.title || filename;
+            if (meta.favorite) card.classList.add('favorited');
+          } else {
+            caption.textContent = filename;
+          }
+        } catch {
+          caption.textContent = filename;
+        }
+
+        card.onclick = () => {
+          window.location.href = `/photo.html?group=${group}&filename=${encodeURIComponent(filename)}`;
+        };
+
+        gallery.appendChild(card);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadGroupGallery);
+  </script>
+</body>
+</html>
