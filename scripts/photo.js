@@ -24,7 +24,6 @@ async function loadPhoto() {
   document.getElementById('groupName').textContent = group;
   document.getElementById('groupLink').href = `/gallery.html?group=${encodeURIComponent(group)}`;
   document.getElementById('groupLink').textContent = group;
-
   document.getElementById('shareLink').value =
     `${window.location.origin}/photo.html?group=${group}&filename=${encodeURIComponent(filename)}`;
 
