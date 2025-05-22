@@ -144,3 +144,28 @@ body {
   opacity: 1;
 }
 
+.card {
+  position: relative;
+}
+
+.card .overlay {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card:hover .overlay {
+  opacity: 1;
+}
+
+.overlay .tags {
+  font-size: 0.75rem;
+  color: #ccc;
+  margin-top: 0.25rem;
+}
