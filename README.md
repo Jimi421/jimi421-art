@@ -1,5 +1,7 @@
 
-# 🎨 Jimi421 Art Gallery
+# 🎨 Jimi421 Art Gallery 
+Check it out here:  
+**[https://jimi421-art.pages.dev](https://jimi421-art.pages.dev)**
 
 A modern, mobile-friendly web app for uploading, previewing, and sharing personal artwork or photos. Built on Cloudflare’s free stack using:
 
@@ -71,32 +73,21 @@ wrangler.example.toml is provided for safe sharing.
 MIT – use, remix, and deploy freely.
 
 🙌 Credits
-<<<<<<< HEAD
-<<<<<<< HEAD
+
 Built with 💙 by @jimi421 and powered by Cloudflare.
 =======
+B
 Built with 💙 by @jimi421 and powered by Cloudflare.
->>>>>>> fed0070 (Add clean README.md to project root)
-=======
-Built with 💙 by @jimi421 and powered by Cloudflare.
-<<<<<<< HEAD
-### 🌐 Live Demo
+
 
 Check it out here:  
 **[https://jimi421-art.pages.dev](https://jimi421-art.pages.dev)**
 
-<<<<<<< HEAD
->>>>>>> 0b59405 (Add live site link to README)
-=======
+
 
 ### 🌐 Live Demo
 
 Check it out here:  
 **[https://jimi421-art.pages.dev](https://jimi421-art.pages.dev)**
 
-<<<<<<< HEAD
->>>>>>> d7798cf (Add live site link to README)
-=======
-=======
->>>>>>> f1442e5 (Create README.md)
->>>>>>> 95b44df (Remove extra README with emoji filename from public/)
+
