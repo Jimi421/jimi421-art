@@ -1,18 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 95b44df (Remove extra README with emoji filename from public/)
-📄 README.md
-markdown
-Copy
-Edit
-<<<<<<< HEAD
->>>>>>> fed0070 (Add clean README.md to project root)
-=======
-=======
->>>>>>> f1442e5 (Create README.md)
->>>>>>> 95b44df (Remove extra README with emoji filename from public/)
+
 # 🎨 Jimi421 Art Gallery
 
 A modern, mobile-friendly web app for uploading, previewing, and sharing personal artwork or photos. Built on Cloudflare’s free stack using:
