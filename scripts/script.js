@@ -1,9 +1,8 @@
 // script.js
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 
-let allItems = [];       // holds { key, url, title, tags, favorite, metaExists }
+let allItems = [];       // holds { key, url, title, tags, favorite }
 let currentGroup = 'all';
-let currentSubGroup = 'all';
 
 async function loadGroups() {
   const res = await fetch(`${API_BASE}/api/groups`);
@@ -14,7 +13,7 @@ async function loadGroups() {
   // “All” button
   const allBtn = document.createElement('button');
   allBtn.textContent = 'All';
-  allBtn.className = 'group-btn';
+  allBtn.className = 'group-btn active';
   allBtn.onclick = () => selectGroup('all', allBtn);
   container.appendChild(allBtn);
 
@@ -25,60 +24,13 @@ async function loadGroups() {
     btn.onclick = () => selectGroup(g, btn);
     container.appendChild(btn);
   });
-
-  const noBtn = document.createElement('button');
-  noBtn.textContent = 'No Metadata';
-  noBtn.className = 'group-btn';
-  noBtn.onclick = () => selectGroup('no-meta', noBtn);
-  container.appendChild(noBtn);
-
-  const defaultBtn = currentGroup === 'no-meta' ? noBtn : allBtn;
-  selectGroup(currentGroup, defaultBtn);
 }
 
 function selectGroup(group, btn) {
   currentGroup = group;
   document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  currentSubGroup = 'all';
-  buildSubGroups();
   renderGallery();
-}
-
-function selectSubGroup(tag, btn) {
-  currentSubGroup = tag;
-  document.querySelectorAll('.subgroup-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderGallery();
-}
-
-function buildSubGroups() {
-  const container = document.getElementById('subGroupButtons');
-  if (!container) return;
-  container.innerHTML = '';
-
-  const tags = new Set();
-  allItems.forEach(it => {
-    if (currentGroup === 'no-meta' && !it.metaExists) {
-      // no tags
-    } else if (currentGroup === 'all' || it.group === currentGroup) {
-      it.tags.forEach(t => tags.add(t));
-    }
-  });
-
-  const allBtn = document.createElement('button');
-  allBtn.textContent = 'All Tags';
-  allBtn.className = 'subgroup-btn' + (currentSubGroup === 'all' ? ' active' : '');
-  allBtn.onclick = () => selectSubGroup('all', allBtn);
-  container.appendChild(allBtn);
-
-  [...tags].sort().forEach(tag => {
-    const btn = document.createElement('button');
-    btn.textContent = tag;
-    btn.className = 'subgroup-btn' + (currentSubGroup === tag ? ' active' : '');
-    btn.onclick = () => selectSubGroup(tag, btn);
-    container.appendChild(btn);
-  });
 }
 
 function setupFilters() {
@@ -88,34 +40,19 @@ function setupFilters() {
     .addEventListener('input', renderGallery);
 }
 
-async function fetchJsonSafe(url) {
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) return {};
-    return await resp.json();
-  } catch {
-    return {};
-  }
-}
-
 async function loadGallery() {
   // 1. Fetch gallery list
   const res = await fetch(`${API_BASE}/api/gallery`);
   const items = await res.json();
 
-  // 2. For each, fetch metadata if available
+  // 2. For each, fetch metadata
   allItems = await Promise.all(items.reverse().map(async item => {
     const filename = item.key.split('/').pop();
     const group = item.key.includes('/') ? item.key.split('/')[0] : 'root';
-    const metaUrl = `${API_BASE}/api/metadata?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
     let meta = {};
-    let metaExists = false;
     try {
-      const metaRes = await fetch(metaUrl);
-      if (metaRes.ok) {
-        meta = await metaRes.json();
-        metaExists = true;
-      }
+      const m = await fetch(`${API_BASE}/api/metadata?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`);
+      if (m.ok) meta = await m.json();
     } catch {}
     return {
       key: item.key,
@@ -123,12 +60,10 @@ async function loadGallery() {
       title: meta.title || filename,
       tags: Array.isArray(meta.tags) ? meta.tags : [],
       favorite: !!meta.favorite,
-      group,
-      metaExists
+      group
     };
   }));
 
-  buildSubGroups();
   renderGallery();
 }
 
@@ -139,15 +74,9 @@ function renderGallery() {
   const favOnly = document.getElementById('filterFavorites').checked;
   const term = document.getElementById('searchInput').value.trim().toLowerCase();
 
-  let items = allItems;
-  if (currentGroup === 'no-meta') {
-    items = items.filter(it => !it.metaExists);
-  } else if (currentGroup !== 'all') {
-    items = items.filter(it => it.group === currentGroup);
-  }
-  if (currentSubGroup !== 'all') {
-    items = items.filter(it => it.tags.includes(currentSubGroup));
-  }
+  let items = allItems.filter(it => 
+    (currentGroup === 'all' || it.group === currentGroup)
+  );
   if (favOnly) items = items.filter(it => it.favorite);
   if (term) items = items.filter(it =>
     it.title.toLowerCase().includes(term) ||
