@@ -3,7 +3,7 @@ let filesToUpload = [], currentGroup = 'root';
 
 // Removed loadGroups()
 
-async function loadGallery(group = 'root') {
+async function loadGallery(group = '') {
   const res = await fetch(`${API_BASE}/api/gallery?group=${encodeURIComponent(group)}`);
   const items = await res.json();
   const container = document.getElementById('gallery');
@@ -61,7 +61,7 @@ document.getElementById('uploadBtn').onclick = async () => {
   btn.disabled = false;
   btn.textContent = 'Upload';
   document.getElementById('closeModal').click();
-  loadGallery(currentGroup);
+  loadGallery('');
   showToast('Upload complete!');
 };
 
