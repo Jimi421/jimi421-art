@@ -23,6 +23,24 @@ body {
   background: #2980b9;
 }
 
+.subgroup-btn {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  background: #8e44ad;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  margin-right: 4px;
+  transition: background 0.3s ease;
+}
+.subgroup-btn.active {
+  background: #5e3370;
+}
+.subgroup-btn:hover {
+  background: #71368a;
+}
+
 /* Gallery Grid */
 #gallery {
   display: grid;

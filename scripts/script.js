@@ -3,6 +3,7 @@ const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 
 let allItems = [];       // holds { key, url, title, tags, favorite }
 let currentGroup = 'all';
+let currentSubGroup = 'all';
 
 async function loadGroups() {
   const res = await fetch(`${API_BASE}/api/groups`);
@@ -30,7 +31,43 @@ function selectGroup(group, btn) {
   currentGroup = group;
   document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  currentSubGroup = 'all';
+  buildSubGroups();
   renderGallery();
+}
+
+function selectSubGroup(tag, btn) {
+  currentSubGroup = tag;
+  document.querySelectorAll('.subgroup-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGallery();
+}
+
+function buildSubGroups() {
+  const container = document.getElementById('subGroupButtons');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const tags = new Set();
+  allItems.forEach(it => {
+    if (currentGroup === 'all' || it.group === currentGroup) {
+      it.tags.forEach(t => tags.add(t));
+    }
+  });
+
+  const allBtn = document.createElement('button');
+  allBtn.textContent = 'All Tags';
+  allBtn.className = 'subgroup-btn' + (currentSubGroup === 'all' ? ' active' : '');
+  allBtn.onclick = () => selectSubGroup('all', allBtn);
+  container.appendChild(allBtn);
+
+  [...tags].sort().forEach(tag => {
+    const btn = document.createElement('button');
+    btn.textContent = tag;
+    btn.className = 'subgroup-btn' + (currentSubGroup === tag ? ' active' : '');
+    btn.onclick = () => selectSubGroup(tag, btn);
+    container.appendChild(btn);
+  });
 }
 
 function setupFilters() {
@@ -64,6 +101,7 @@ async function loadGallery() {
     };
   }));
 
+  buildSubGroups();
   renderGallery();
 }
 
@@ -74,9 +112,12 @@ function renderGallery() {
   const favOnly = document.getElementById('filterFavorites').checked;
   const term = document.getElementById('searchInput').value.trim().toLowerCase();
 
-  let items = allItems.filter(it => 
+  let items = allItems.filter(it =>
     (currentGroup === 'all' || it.group === currentGroup)
   );
+  if (currentSubGroup !== 'all') {
+    items = items.filter(it => it.tags.includes(currentSubGroup));
+  }
   if (favOnly) items = items.filter(it => it.favorite);
   if (term) items = items.filter(it =>
     it.title.toLowerCase().includes(term) ||
