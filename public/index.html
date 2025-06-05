@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🎨 Jimi421 Art Gallery</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <h1>🎨 Jimi421 Art Gallery</h1>
+
+  <!-- Group filters -->
+  <div id="groupButtons"></div>
+
+  <!-- Main gallery grid -->
+  <div id="gallery"></div>
+
+  <!-- Floating upload button -->
+  <button id="openUpload">＋</button>
+
+  <!-- Upload Modal -->
+  <div id="uploadModal" class="modal">
+    <div class="modal-content">
+      <h2>Upload Files</h2>
+      <div id="dropzone" class="dropzone">Drag & drop files here or click to select</div>
+      <input type="file" id="fileInput" multiple accept="image/*,video/*" />
+      <div id="previewGrid"></div>
+      <button id="uploadBtn" class="btn upload">Upload</button>
+      <button id="closeModal" class="btn close">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Image enlarge modal (optional) -->
+  <div id="imageModal" class="modal">
+    <button class="close" onclick="closeImageModal()">×</button>
+    <img id="modalImage" />
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast"></div>
+
+  <!-- Scripts -->
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# wrangler.example.toml
+# Rename this to wrangler.toml and fill in your actual values to deploy
+
+name = "your-project-name"
+account_id = "your-cloudflare-account-id"
+compatibility_date = "2025-05-10"
+
+main = "worker/index.js"
+
+# Optional KV Namespace (replace with your actual ID if using one)
+[[kv_namespaces]]
+binding = "GALLERY_KV"
+id = "your-kv-namespace-id"
+
+# Optional R2 Bucket (replace with your actual bucket name)
+[[r2_buckets]]
+binding = "ART_BUCKET"
+bucket_name = "your-r2-bucket-name"
