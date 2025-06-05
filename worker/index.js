@@ -17,7 +17,7 @@ export default {
     // ---- Groups list ----
     if (request.method === 'GET' && url.pathname === '/api/groups') {
       const current = JSON.parse(await env.GALLERY_KV.get('items') || '[]');
-      const groups = [...new Set(current.map(k => k.split('/')[0] || 'root'))];
+      const groups = [...new Set(current.map(k => k.includes('/') ? k.split('/')[0] : 'root'))];
       return new Response(JSON.stringify(groups), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -50,10 +50,20 @@ export default {
       const group = url.searchParams.get('group');
       const options = group ? { prefix: `${group}/` } : {};
       const list = await env.ART_BUCKET.list(options);
-      const items = list.objects.map(o => ({
-        key: o.key,
-        url: `/api/image?group=${encodeURIComponent(o.key.split('/')[0])}&filename=${encodeURIComponent(o.key.split('/').slice(1).join('/'))}`
-      }));
+      const items = list.objects.map(o => {
+        let g, f;
+        if (o.key.includes('/')) {
+          g = o.key.split('/')[0];
+          f = o.key.split('/').slice(1).join('/');
+        } else {
+          g = 'root';
+          f = o.key;
+        }
+        return {
+          key: o.key,
+          url: `/api/image?group=${encodeURIComponent(g)}&filename=${encodeURIComponent(f)}`
+        };
+      });
       return new Response(JSON.stringify(items), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -67,8 +77,12 @@ export default {
       if (!filename) {
         return new Response('Missing filename', { status: 400, headers: corsHeaders });
       }
-      const key = `${group}/${filename}`;
-      const object = await env.ART_BUCKET.get(key);
+      let key = `${group}/${filename}`;
+      let object = await env.ART_BUCKET.get(key);
+      if (!object && group === 'root') {
+        key = filename;
+        object = await env.ART_BUCKET.get(key);
+      }
       if (!object) {
         return new Response('Not found', { status: 404, headers: corsHeaders });
       }
