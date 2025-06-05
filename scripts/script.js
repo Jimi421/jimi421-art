@@ -1,8 +1,8 @@
 // script.js
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 
-let allItems = [];       // holds { key, url, title, tags, favorite }
-let currentGroup = 'all';
+let allItems = [];       // holds { key, url, title, tags, favorite, metaExists }
+let currentGroup = 'no-meta';
 let currentSubGroup = 'all';
 
 async function loadGroups() {
@@ -14,7 +14,7 @@ async function loadGroups() {
   // “All” button
   const allBtn = document.createElement('button');
   allBtn.textContent = 'All';
-  allBtn.className = 'group-btn active';
+  allBtn.className = 'group-btn';
   allBtn.onclick = () => selectGroup('all', allBtn);
   container.appendChild(allBtn);
 
@@ -25,6 +25,14 @@ async function loadGroups() {
     btn.onclick = () => selectGroup(g, btn);
     container.appendChild(btn);
   });
+
+  const noBtn = document.createElement('button');
+  noBtn.textContent = 'No Metadata';
+  noBtn.className = 'group-btn';
+  noBtn.onclick = () => selectGroup('no-meta', noBtn);
+  container.appendChild(noBtn);
+
+  selectGroup(currentGroup, noBtn);
 }
 
 function selectGroup(group, btn) {
@@ -50,7 +58,9 @@ function buildSubGroups() {
 
   const tags = new Set();
   allItems.forEach(it => {
-    if (currentGroup === 'all' || it.group === currentGroup) {
+    if (currentGroup === 'no-meta' && !it.metaExists) {
+      // no tags
+    } else if (currentGroup === 'all' || it.group === currentGroup) {
       it.tags.forEach(t => tags.add(t));
     }
   });
@@ -97,14 +107,23 @@ async function loadGallery() {
     const filename = item.key.split('/').pop();
     const group = item.key.includes('/') ? item.key.split('/')[0] : 'root';
     const metaUrl = `${API_BASE}/api/metadata?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
-    const meta = await fetchJsonSafe(metaUrl);
+    let meta = {};
+    let metaExists = false;
+    try {
+      const metaRes = await fetch(metaUrl);
+      if (metaRes.ok) {
+        meta = await metaRes.json();
+        metaExists = true;
+      }
+    } catch {}
     return {
       key: item.key,
       url: `${API_BASE}${item.url}`,
       title: meta.title || filename,
       tags: Array.isArray(meta.tags) ? meta.tags : [],
       favorite: !!meta.favorite,
-      group
+      group,
+      metaExists
     };
   }));
 
@@ -119,9 +138,12 @@ function renderGallery() {
   const favOnly = document.getElementById('filterFavorites').checked;
   const term = document.getElementById('searchInput').value.trim().toLowerCase();
 
-  let items = allItems.filter(it =>
-    (currentGroup === 'all' || it.group === currentGroup)
-  );
+  let items = allItems;
+  if (currentGroup === 'no-meta') {
+    items = items.filter(it => !it.metaExists);
+  } else if (currentGroup !== 'all') {
+    items = items.filter(it => it.group === currentGroup);
+  }
   if (currentSubGroup !== 'all') {
     items = items.filter(it => it.tags.includes(currentSubGroup));
   }
