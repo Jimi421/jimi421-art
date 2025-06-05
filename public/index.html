@@ -7,10 +7,14 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <h1>🎨 Jimi421 Art Gallery</h1>
+  <button id="navToggle" class="nav-toggle">☰</button>
 
-  <!-- Group filters -->
-  <div id="groupButtons"></div>
+  <div id="sideNav" class="sidenav">
+    <h2>Groups</h2>
+    <div id="groupButtons"></div>
+  </div>
+
+  <h1>🎨 Jimi421 Art Gallery</h1>
 
   <!-- Main gallery grid -->
   <div id="gallery"></div>
@@ -40,6 +44,11 @@
   <div id="toast"></div>
 
   <!-- Scripts -->
-  <script src="script.js"></script>
+  <script src="/scripts/script.js"></script>
+  <script>
+    document.getElementById('navToggle').onclick = () => {
+      document.getElementById('sideNav').classList.toggle('open');
+    };
+  </script>
 </body>
 </html>
