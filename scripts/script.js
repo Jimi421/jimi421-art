@@ -77,20 +77,27 @@ function setupFilters() {
     .addEventListener('input', renderGallery);
 }
 
+async function fetchJsonSafe(url) {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return {};
+    return await resp.json();
+  } catch {
+    return {};
+  }
+}
+
 async function loadGallery() {
   // 1. Fetch gallery list
   const res = await fetch(`${API_BASE}/api/gallery`);
   const items = await res.json();
 
-  // 2. For each, fetch metadata
+  // 2. For each, fetch metadata if available
   allItems = await Promise.all(items.reverse().map(async item => {
     const filename = item.key.split('/').pop();
     const group = item.key.includes('/') ? item.key.split('/')[0] : 'root';
-    let meta = {};
-    try {
-      const m = await fetch(`${API_BASE}/api/metadata?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`);
-      if (m.ok) meta = await m.json();
-    } catch {}
+    const metaUrl = `${API_BASE}/api/metadata?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
+    const meta = await fetchJsonSafe(metaUrl);
     return {
       key: item.key,
       url: `${API_BASE}${item.url}`,
