@@ -2,7 +2,7 @@
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 
 let allItems = [];       // holds { key, url, title, tags, favorite, metaExists }
-let currentGroup = 'no-meta';
+let currentGroup = 'all';
 let currentSubGroup = 'all';
 
 async function loadGroups() {
@@ -32,7 +32,8 @@ async function loadGroups() {
   noBtn.onclick = () => selectGroup('no-meta', noBtn);
   container.appendChild(noBtn);
 
-  selectGroup(currentGroup, noBtn);
+  const defaultBtn = currentGroup === 'no-meta' ? noBtn : allBtn;
+  selectGroup(currentGroup, defaultBtn);
 }
 
 function selectGroup(group, btn) {
