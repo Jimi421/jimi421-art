@@ -17,6 +17,7 @@ async function loadGroups() {
   allBtn.onclick = () => selectGroup('all', allBtn);
   container.appendChild(allBtn);
 
+  // Existing groups from KV
   groups.sort().forEach(g => {
     const btn = document.createElement('button');
     btn.textContent = g;
@@ -24,6 +25,14 @@ async function loadGroups() {
     btn.onclick = () => selectGroup(g, btn);
     container.appendChild(btn);
   });
+
+  // ALWAYS add “Uncategorized” (root) so that any photo
+  // without an explicit group still appears in the filter list
+  const uncategorizedBtn = document.createElement('button');
+  uncategorizedBtn.textContent = 'Uncategorized';
+  uncategorizedBtn.className = 'group-btn';
+  uncategorizedBtn.onclick = () => selectGroup('root', uncategorizedBtn);
+  container.appendChild(uncategorizedBtn);
 }
 
 function selectGroup(group, btn) {
@@ -34,20 +43,19 @@ function selectGroup(group, btn) {
 }
 
 function setupFilters() {
-  document.getElementById('filterFavorites')
-    .addEventListener('change', renderGallery);
-  document.getElementById('searchInput')
-    .addEventListener('input', renderGallery);
+  document.getElementById('filterFavorites').addEventListener('change', renderGallery);
+  document.getElementById('searchInput').addEventListener('input', renderGallery);
 }
 
 async function loadGallery() {
-  // 1. Fetch gallery list
+  // 1. Fetch gallery list from the Worker
   const res = await fetch(`${API_BASE}/api/gallery`);
   const items = await res.json();
 
-  // 2. For each, fetch metadata
+  // 2. For each object, pull its metadata
   allItems = await Promise.all(items.reverse().map(async item => {
     const filename = item.key.split('/').pop();
+    // If there's no slash, treat it as “root” (Uncategorized)
     const group = item.key.includes('/') ? item.key.split('/')[0] : 'root';
     let meta = {};
     try {
@@ -74,14 +82,22 @@ function renderGallery() {
   const favOnly = document.getElementById('filterFavorites').checked;
   const term = document.getElementById('searchInput').value.trim().toLowerCase();
 
-  let items = allItems.filter(it => 
-    (currentGroup === 'all' || it.group === currentGroup)
-  );
+  // FILTER 1: group fallback to 'root' if missing
+  let items = allItems.filter(it => {
+    const group = it.group || 'root';
+    return currentGroup === 'all' || group === currentGroup;
+  });
+
+  // FILTER 2: favorite checkbox
   if (favOnly) items = items.filter(it => it.favorite);
-  if (term) items = items.filter(it =>
-    it.title.toLowerCase().includes(term) ||
-    it.tags.some(t => t.toLowerCase().includes(term))
-  );
+
+  // FILTER 3: search by title or tags
+  if (term) {
+    items = items.filter(it =>
+      it.title.toLowerCase().includes(term) ||
+      it.tags.some(t => t.toLowerCase().includes(term))
+    );
+  }
 
   if (!items.length) {
     container.innerHTML = '<p style="text-align:center;">No matches.</p>';
@@ -114,14 +130,14 @@ function renderGallery() {
 
     card.onclick = () => {
       window.location.href =
-        `/photo.html?group=${encodeURIComponent(it.group)}&filename=${encodeURIComponent(it.key.split('/').pop())}`;
+        `/photo.html?group=${encodeURIComponent(it.group || 'root')}&filename=${encodeURIComponent(it.key.split('/').pop())}`;
     };
 
     container.append(card);
   });
 }
 
-// Upload modal logic (unchanged from before)
+// ——— Upload modal logic (unchanged) ———
 let filesToUpload = [];
 document.getElementById('openUpload').onclick = () => document.getElementById('uploadModal').classList.add('active');
 document.getElementById('closeModal').onclick = () => {
@@ -165,8 +181,10 @@ function renderPreviewGrid() {
   filesToUpload.forEach((file, i) => {
     const reader = new FileReader();
     reader.onload = () => {
-      const div = document.createElement('div'); div.className = 'preview';
-      const img = document.createElement('img'); img.src = reader.result;
+      const div = document.createElement('div');
+      div.className = 'preview';
+      const img = document.createElement('img');
+      img.src = reader.result;
       div.append(img);
       const removeBtn = document.createElement('button');
       removeBtn.textContent = '✕';
@@ -185,7 +203,7 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// Initialize
+// Initialize everything
 window.addEventListener('DOMContentLoaded', async () => {
   await loadGroups();
   await loadGallery();

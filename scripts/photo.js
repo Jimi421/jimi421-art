@@ -1,3 +1,4 @@
+// public/photo.js
 const API_BASE = 'https://jimi421-art.jimi421.workers.dev';
 
 function getQueryParams() {
@@ -15,36 +16,48 @@ async function loadPhoto() {
   const container = document.getElementById('mediaContainer');
   const isVideo = filename.match(/\.(mp4|mov|webm)$/i);
   const media = document.createElement(isVideo ? 'video' : 'img');
-  media.src = `${API_BASE}/api/image?group=${group}&filename=${encodeURIComponent(filename)}`;
+  media.src = `${API_BASE}/api/image?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
   if (isVideo) media.controls = true;
   media.alt = filename;
   media.className = 'main-media';
   container.appendChild(media);
 
-  document.getElementById('groupName').textContent = group;
+  // Display “Uncategorized” instead of “root”
+  const displayGroup = group === 'root' ? 'Uncategorized' : group;
+  document.getElementById('groupName').textContent = displayGroup;
   document.getElementById('groupLink').href = `/gallery.html?group=${encodeURIComponent(group)}`;
-  document.getElementById('groupLink').textContent = group;
+  document.getElementById('groupLink').textContent = displayGroup;
 
-  document.getElementById('shareLink').value = `${window.location.origin}/photo.html?group=${group}&filename=${encodeURIComponent(filename)}`;
+  // Set share link (still passes ‘root’ in URL if ungrouped)
+  document.getElementById('shareLink').value =
+    `${window.location.origin}/photo.html?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`;
 
   const titleText = document.getElementById('titleText');
   const titleInput = document.getElementById('titleInput');
+  const favoriteChk = document.getElementById('favoriteChk');
+  const tagsDisplay = document.getElementById('tagsDisplay');
 
-  // Load metadata
+  // Load metadata (title, tags, favorite)
   try {
-    const res = await fetch(`${API_BASE}/api/metadata?group=${group}&filename=${filename}`);
+    const res = await fetch(
+      `${API_BASE}/api/metadata?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`
+    );
     if (res.ok) {
       const meta = await res.json();
+      // Title fallback → filename
       const title = meta.title || filename;
       titleText.textContent = title;
       titleInput.value = title;
 
-      document.getElementById('favoriteChk').checked = meta.favorite || false;
+      // Favorite checkbox
+      favoriteChk.checked = meta.favorite || false;
 
+      // Tags fallback → empty array
       if (Array.isArray(meta.tags)) {
         meta.tags.forEach(addTagToDisplay);
       }
     } else {
+      // If metadata call fails, just show filename
       titleText.textContent = filename;
       titleInput.value = filename;
     }
@@ -55,6 +68,7 @@ async function loadPhoto() {
   }
 }
 
+// When user clicks on the title text, swap to input for editing
 document.getElementById('editableTitle').onclick = () => {
   const text = document.getElementById('titleText');
   const input = document.getElementById('titleInput');
@@ -63,6 +77,7 @@ document.getElementById('editableTitle').onclick = () => {
   input.focus();
 };
 
+// When title input loses focus, write it back to the text and hide input
 document.getElementById('titleInput').onblur = () => {
   const text = document.getElementById('titleText');
   const input = document.getElementById('titleInput');
@@ -71,6 +86,7 @@ document.getElementById('titleInput').onblur = () => {
   input.style.display = 'none';
 };
 
+// “Add Tag” button → create a <span class="tag"> and append
 document.getElementById('addTagBtn').onclick = () => {
   const input = document.getElementById('tagInput');
   const tag = input.value.trim();
@@ -80,16 +96,20 @@ document.getElementById('addTagBtn').onclick = () => {
   }
 };
 
+// Helper to render a single tag bubble
 function addTagToDisplay(tag) {
   const span = document.createElement('span');
   span.textContent = tag;
   span.className = 'tag';
+  // Clicking a tag removes it
   span.onclick = () => span.remove();
   document.getElementById('tagsDisplay').appendChild(span);
 }
 
+// “Save Metadata” → collect title, tags, favorite → PUT to KV
 document.getElementById('saveMetaBtn').onclick = async () => {
   const { group, filename } = getQueryParams();
+  // Gather tags from all <span class="tag">
   const tags = Array.from(document.querySelectorAll('#tagsDisplay .tag')).map(el => el.textContent);
   const title = document.getElementById('titleInput').value;
   const favorite = document.getElementById('favoriteChk').checked;
@@ -97,11 +117,14 @@ document.getElementById('saveMetaBtn').onclick = async () => {
   const payload = { title, tags, favorite };
 
   try {
-    const res = await fetch(`${API_BASE}/api/metadata?group=${group}&filename=${filename}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    const res = await fetch(
+      `${API_BASE}/api/metadata?group=${encodeURIComponent(group)}&filename=${encodeURIComponent(filename)}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }
+    );
     if (res.ok) {
       alert('✅ Metadata saved!');
     } else {
@@ -112,6 +135,7 @@ document.getElementById('saveMetaBtn').onclick = async () => {
   }
 };
 
+// Show/hide the share‐link input
 function openShare() {
   document.getElementById('shareLink').style.display = 'block';
 }
